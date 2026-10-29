@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <item name="nav_login" type="id" />
+    <item name="nav_form" type="id" />
+    <item name="nav_list" type="id" />
+    <item name="nav_checkout" type="id" />
+    <item name="nav_effects" type="id" />
+    <item name="nav_crash" type="id" />
+    <item name="nav_secure" type="id" />
+    <item name="nav_timer" type="id" />
+    <item name="login_email" type="id" />
+    <item name="login_password" type="id" />
+    <item name="login_submit" type="id" />
+    <item name="login_error" type="id" />
+    <item name="form_name" type="id" />
+    <item name="form_phone" type="id" />
+    <item name="form_notes" type="id" />
+    <item name="form_newsletter" type="id" />
+    <item name="form_plan" type="id" />
+    <item name="plan_free" type="id" />
+    <item name="plan_pro" type="id" />
+    <item name="form_submit" type="id" />
+    <item name="form_result" type="id" />
+    <item name="list_items" type="id" />
+    <item name="list_selected" type="id" />
+    <item name="checkout_step" type="id" />
+    <item name="checkout_next" type="id" />
+    <item name="checkout_back" type="id" />
+    <item name="checkout_cart" type="id" />
+    <item name="checkout_address" type="id" />
+    <item name="checkout_address_input" type="id" />
+    <item name="checkout_pay" type="id" />
+    <item name="checkout_done" type="id" />
+    <item name="effects_sound" type="id" />
+    <item name="effects_vibrate" type="id" />
+    <item name="effects_toast" type="id" />
+    <item name="effects_dialog" type="id" />
+    <item name="effects_dialog_result" type="id" />
+    <item name="effects_notification" type="id" />
+    <item name="effects_permission" type="id" />
+    <item name="effects_permission_result" type="id" />
+    <item name="crash_now" type="id" />
+    <item name="anr_now" type="id" />
+    <item name="secure_text" type="id" />
+    <item name="timer_value" type="id" />
+    <item name="timer_started_at" type="id" />
+</resources>
