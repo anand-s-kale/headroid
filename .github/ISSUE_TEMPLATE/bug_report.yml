@@ -1,0 +1,31 @@
+name: Bug report
+description: Something in headroid does not work as documented
+labels: ["bug"]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: "And what you expected instead."
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      render: shell
+    validations:
+      required: true
+  - type: input
+    id: env
+    attributes:
+      label: Environment
+      placeholder: "headroid 0.1.0, Pixel 8 Android 15, Windows 11, Node 20"
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: "Output of `headroid doctor` and relevant logcat lines. Remove personal data."
+      render: text

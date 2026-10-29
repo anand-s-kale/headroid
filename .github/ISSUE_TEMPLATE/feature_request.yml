@@ -1,0 +1,21 @@
+name: Feature request
+description: Suggest an idea for headroid
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: "What are you trying to test or automate?"
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal
+      description: "API sketch or behaviour you would like."
+  - type: textarea
+    id: prior
+    attributes:
+      label: Prior art
+      description: "How do other tools do this? Link only; do not paste code from projects without a compatible licence."

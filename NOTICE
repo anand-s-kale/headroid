@@ -1,0 +1,16 @@
+headroid
+Copyright 2026 Anand S Kale and the headroid contributors
+
+This product is licensed under the Apache License, Version 2.0 (see LICENSE).
+
+Third-party components
+----------------------
+
+Portions of the device server (device-server/) will be derived from scrcpy:
+  scrcpy, Copyright (C) 2018 Genymobile
+  Copyright (C) 2018-2026 Romain Vimont
+  Licensed under the Apache License, Version 2.0
+  https://github.com/Genymobile/scrcpy
+
+Files derived from third-party sources keep their original copyright headers and
+state the modifications made, as required by section 4 of the Apache License 2.0.

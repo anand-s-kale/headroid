@@ -1,0 +1,21 @@
+# Node
+node_modules/
+dist/
+*.tsbuildinfo
+# Java / Android
+build/
+.gradle/
+*.class
+local.properties
+# IDE / OS
+.idea/
+.vscode/
+*.iml
+.DS_Store
+Thumbs.db
+# headroid outputs (may contain personal data)
+traces/
+test-results/
+headroid-report/
+*.mp4
+.env

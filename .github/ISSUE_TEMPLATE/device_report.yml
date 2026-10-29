@@ -1,0 +1,44 @@
+name: Device report
+description: Share what headroid (or the M0 experiment) does on your phone
+title: "[device] <brand model>, Android <version>"
+labels: ["device-report"]
+body:
+  - type: markdown
+    attributes:
+      value: "Thanks! Reports fill the [capability matrix](https://github.com/MrAk47Anand007/headroid/blob/main/docs/CAPABILITY-MATRIX.md). Do not attach screenshots that show personal data."
+  - type: input
+    id: device
+    attributes:
+      label: Device
+      description: "Brand and model, e.g. Pixel 8, Galaxy S23"
+    validations:
+      required: true
+  - type: input
+    id: android
+    attributes:
+      label: Android version and skin
+      description: "Settings > About phone, e.g. Android 15 (One UI 7)"
+    validations:
+      required: true
+  - type: input
+    id: tool
+    attributes:
+      label: headroid / scrcpy version
+      placeholder: "scrcpy 3.3 or headroid 0.1.0"
+  - type: checkboxes
+    id: results
+    attributes:
+      label: What worked
+      options:
+        - label: Hidden virtual display created
+        - label: App launched on it
+        - label: Taps/text reached only the hidden display
+        - label: My foreground app kept focus and keyboard while the test ran
+        - label: Screenshots/frames of the hidden display
+        - label: UI tree of the hidden display
+        - label: Test kept running with my screen off
+  - type: textarea
+    id: leaks
+    attributes:
+      label: What leaked or broke
+      description: "Keyboard, focus, dialogs, audio, notifications, crashes. Include commands and logs."
