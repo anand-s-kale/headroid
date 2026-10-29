@@ -25,6 +25,10 @@ android {
     lint {
         disable 'UseRequiresApi'
     }
+    // headroid: let unit tests touch android.util.Log (via Ln) without the "Stub!" exception
+    testOptions {
+        unitTests.returnDefaultValues = true
+    }
 }
 
 dependencies {
