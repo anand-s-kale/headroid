@@ -1,0 +1,33 @@
+name: host
+
+on:
+  push:
+    paths:
+      - "packages/**"
+      - ".github/workflows/host.yml"
+  pull_request:
+    paths:
+      - "packages/**"
+      - ".github/workflows/host.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ["3.11", "3.13"]
+    defaults:
+      run:
+        working-directory: packages/headroid
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - run: pip install -e ".[dev]"
+      - run: python -m ruff check
+      - run: python -m pytest -q

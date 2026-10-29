@@ -1,6 +1,6 @@
 # packages
 
-Host-side Python packages (planned, see [ADR 0003](../docs/adr/0003-compose-open-source-stack.md)):
+Host-side Python packages (`headroid/` skeleton exists, rest planned, see [ADR 0003](../docs/adr/0003-compose-open-source-stack.md)):
 
 | Module | Purpose |
 |---|---|

@@ -35,6 +35,9 @@ jobs:
             sample-app/**/*.gradle.kts
             sample-app/gradle/wrapper/gradle-wrapper.properties
       - uses: android-actions/setup-android@v3
+        with:
+          # the default list includes the removed "tools" package, which fails on current runners
+          packages: "platform-tools platforms;android-35 build-tools;35.0.0"
       - name: Make gradlew executable
         run: chmod +x gradlew
       - name: Build and lint
