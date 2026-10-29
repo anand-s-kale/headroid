@@ -16,6 +16,10 @@ Goal: prove isolation on a real phone using stock tools before writing framework
 - [ ] Fork scrcpy-server into `device-server/` with attribution
 - [ ] JSON-RPC: create/destroy display, launch app, tap/swipe/key/text, frame capture, UI tree
 - [ ] Focus guard, IME `HIDE`, mute, teardown on disconnect
+- [ ] Teardown order: remove every task on the display **before** releasing it (otherwise focus can stick to a dead
+      display until reboot; see [TECHNIQUES.md](research/TECHNIQUES.md) §3.9)
+- [ ] Verify the effect of every injected action (injection can report success and do nothing)
+- [ ] Never swap the system default IME or use global accessibility actions such as BACK: both hit the owner's display
 - [ ] `headroid doctor`: probe what the connected phone supports
 
 ## M2: TypeScript SDK and CLI
