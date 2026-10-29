@@ -1,4 +1,4 @@
-# Handoff: where headroid stands (2026-10-30)
+# Handoff: where headroid stands (2026-10-30, after the overnight session)
 
 For the next agent session picking up headroid. Read this first, then the design.
 
@@ -38,16 +38,59 @@ phone locked in a pocket). Full product, open source (Apache-2.0), owner's own u
 - Commits are signed off (`git commit -s`) and end with the Co-Authored-By line; push to `main` is the current
   practice for this solo repo.
 
+## Session 2026-10-30 (overnight, unattended): summary for the owner
+
+Built the plan, the sample app, the first M1 device server and the Python host. **Nothing has run on a phone or an
+emulator yet**: the owner stopped the session before the emulator check, and asked that testing wait for a session
+with the phone. The owner's POCO F6 was attached over wireless debugging all session and received no commands.
+
+| Piece | Where | Verified (evidence) |
+|---|---|---|
+| Implementation plan, all stages, wire protocol v1 | [`docs/superpowers/plans/2026-10-30-headroid-implementation.md`](superpowers/plans/2026-10-30-headroid-implementation.md) | Commit `3dd140f` |
+| Sample app `dev.headroid.sample` (all §6.7 screens, ids + content descriptions; login `demo@headroid.dev` / `headroid`) | [`sample-app/`](../sample-app/README.md) | `./gradlew :app:assembleDebug :app:lintDebug` passes locally; Actions run 40940804222 green, artifact `headroid-sample-debug` (827 KB) |
+| Device server: scrcpy-server v4.1 fork + `dev.headroid.server.HeadroidServer` | [`device-server/`](../device-server/README.md) | `:server:headroidJar :server:testDebugUnitTest` passes locally (55 headroid tests); Actions run 40940804402 green, artifact `headroid-server` |
+| Python host skeleton (`Adb`, `RpcClient`, `ServerProcess`, `Device`, `Display`, CLI) | [`packages/headroid/`](../packages/headroid/README.md) | 9 pytest tests + ruff pass locally; Actions `host` workflow green on 3.11 and 3.13 |
+| Emulator / phone smoke script | `packages/headroid/scripts/emulator_smoke.py` | **UNVERIFIED** (never run) |
+
+What the server does (all UNVERIFIED on Android): JSON-RPC on `localabstract:headroid`; `display.create` with the M0
+flags plus `DESTROY_CONTENT_ON_REMOVAL` (apps left on a released display are destroyed, not moved to the owner's
+screen) and IME policy HIDE; ImageReader-backed screenshots; in-process tap/long press/swipe/key/text per display
+with a set-text fallback for emoji and non-Latin text; `ui.tree` from a shell UiAutomation filtered to the display;
+`app.launch` with `FLAG_ACTIVITY_MULTIPLE_TASK`; teardown 15 s after the host disconnects (stop launched apps, release
+displays, disconnect UiAutomation); display 0 and foreign displays rejected by every RPC.
+
+Environment notes added this session: an AVD `headroid_api36` (Android 16 / 36.1 x86_64, WHPX works) exists but has
+not been booted to completion; headless it runs as `qemu-system-x86_64-headless.exe`. `android-actions/setup-android@v3`
+needs an explicit `packages:` list on current runners (its default `tools` package fails).
+
+## On-device checklist for the next session with the owner
+
+Run in this order; stop at the first failure. Check the foreground app first (`dumpsys window | grep mCurrentFocus`),
+never capture display 0, and keep screenshots of the hidden display only.
+
+1. **Build and install**: `device-server` `./gradlew :server:headroidJar`; install `sample-app` debug APK on the phone.
+2. **Smoke**: `python packages/headroid/scripts/emulator_smoke.py --serial <phone serial> --allow-device --jar ... --apk ...`
+   Expect every check true: launch and tree, PNG screenshot, login flow, Unicode text via `setText`,
+   `mTopFocusedDisplayId` 0 before and after, display 0 rejected, nothing left after teardown.
+   Likely first failures to watch: UiAutomation hidden constructor/`connect(int)` on Android 16 HyperOS
+   (`-32012`), `setDisplayImePolicy`, `injectInputEvent` WAIT_FOR_RESULT from shell.
+3. **Owner typing while tests run**: owner types in a chat app while a loop taps and types on the hidden display
+   (M0 method, 26 samples): focus and keyboard stay with the owner, no leaked keys.
+4. **Teardown**: `kill -9` the host mid-session, then the server process; after the grace period no `headroid`
+   display in `dumpsys display`, no sample activity on display 0, focus on display 0.
+5. **Effects leakage** (sample `EffectsActivity`): sound, vibration, toast, dialog, notification, permission prompt.
+   Record what reaches the owner (muting is plan Task 1.8, not built yet: expected to leak today).
+6. **Smoothness**: `dumpsys gfxinfo <owner app> framestats` janky share and p95 with nothing / server idle / actions
+   every 1 s / screenshots every 1 s / `ui.tree` every 1 s (plan Task 1.12), plus the owner's feel of keyboard lag.
+7. **Long runs**: sample `TimerActivity` on the hidden display over Wi-Fi for 60 min with music and reels, then 30–60
+   min screen off; record battery and temperature at start and end.
+
 ## Next work (in order)
-1. Write the implementation plan from the design (superpowers `writing-plans`), saved under `docs/superpowers/plans/`.
-2. **Sample app** (`sample-app/`, Kotlin, `dev.headroid.sample`) with the screens listed in design §6.7, plus a GitHub
-   Actions workflow that builds it and uploads the APK artifact.
-3. **M1 device server**: fork scrcpy-server v4.1 into `device-server/` (keep Genymobile headers, NOTICE), strip
-   what headroid doesn't need, add JSON-RPC over an adb-forwarded `localabstract` socket, in-process input injection
-   per display, ImageReader screenshots, per-display UI tree, isolation guard, governor, watchdog/teardown.
-4. Host skeleton (`packages/` Python): connect/start server, call RPCs, screenshot, tree, tap/type.
-5. Verify on an Android 14/15/16 emulator (AVD) on the PC. Leave a checklist of on-device checks for the owner's next
-   session (60-min run with music and reels, frame-time measurements, lag root cause, screen-off 30–60 min).
+1. Run the checklist above with the owner; fix what fails.
+2. M1 remaining (plan Tasks 1.8–1.12): isolation guard (focus check, app-op muting with restore, display-0 leak
+   watch), resource governor, opt-in video, strip unused scrcpy parts, `verify:true` effect checks, lag root cause.
+3. M2 (plan Tasks 2.2–2.6): async API, `Page`, `Locator` + `expect`, `pair`/`connect`, `doctor`, packaging.
+4. Emulator CI lane for the device-server API surface (Android 14/15/16 AVDs) once the smoke passes on the phone.
 
 ## Environment facts (owner's Windows PC)
 - Repo: `C:\Users\Anand\OneDrive - Xalta Technology Services Pvt Ltd\Documents\GitHub\headroid` (OneDrive path,
