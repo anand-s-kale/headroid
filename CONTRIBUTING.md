@@ -20,8 +20,13 @@ Thanks for helping. headroid is early, so the most valuable contributions right 
 
 ## Development setup
 
-Nothing to build yet. Tooling (JDK 17 + Android SDK for `device-server/`, Node.js 20+ for `packages/`) will be
-documented here when M1 starts.
+Nothing to build yet. Tooling (JDK 17 + Android SDK for `device-server/`, Python 3.12+ with `uv` for `packages/` and
+`integrations/`) will be documented here when M1 starts.
+
+## Reusing code from other projects
+
+Read [ADR 0003](docs/adr/0003-compose-open-source-stack.md). Apache-2.0 / MIT / BSD code (scrcpy, ARTEMIS, mobile-use,
+uiautomator2…) is welcome: keep its copyright header, add a "modified for headroid" line, and update `NOTICE`.
 
 ## Commit style
 

@@ -2,11 +2,11 @@
 
 ```
 ┌──────────────────────── Host (your computer) ────────────────────────┐
-│  Test files / AI agent                                               │
-│     │                                                                │
-│  @headroid/test (runner, expect, traces)   @headroid/mcp (agent tools)│
+│  Test files · ARTEMIS · mobile-use · any MCP agent                   │
+│     │              │ (integrations/: HeadroidDriver)                 │
+│  headroid.test (runner, expect, traces)   headroid.mcp (agent tools) │
 │     └──────────────┬───────────────────────────┘                     │
-│              headroid (TypeScript SDK: Device, Page, Locator)        │
+│              headroid (Python SDK: Device, Page, Locator)            │
 │                     │  JSON-RPC over an adb-forwarded socket         │
 └─────────────────────┼────────────────────────────────────────────────┘
                       │  wireless ADB (adb pair / adb connect)
@@ -38,12 +38,15 @@
 - **Guard:** mutes the app under test (`appops` PLAY_AUDIO / VIBRATE), and tears the display down when the host
   disconnects so no stray tasks are left behind.
 
-## Host
+## Host (Python-first, see ADR 0003)
 
 - **SDK** (`headroid`): `Device` → `Page` (one hidden display + app) → `Locator` (text, resource-id, content-desc, hint,
-  role) with auto-wait.
-- **Test runner** (`@headroid/test`): fixtures, retries, HTML report, trace viewer (frames + tree + actions).
-- **MCP server** (`@headroid/mcp`): `launch`, `observe` (screenshot + tree), `act`, `assert`, `report_bug`, `close`.
+  role) with auto-wait. Uses `adbutils` for ADB and `uiautomator2`-style selectors.
+- **Test runner** (`headroid.test`, pytest plugin): fixtures, retries, HTML report, trace viewer (frames + tree + actions).
+- **MCP server** (`headroid.mcp`): `launch`, `observe` (screenshot + tree), `act`, `assert`, `report_bug`, `close`.
 - **CLI** (`headroid`): `pair`, `doctor` (capability probe), `run`, `record`.
+- **Integrations**: `integrations/artemis` (ARTEMIS `BaseDeviceDriver`), `integrations/mobile-use` (controller).
+  These make existing agents headless without forking their agent logic.
+- A TypeScript client can come later; the device-server JSON-RPC protocol is language-neutral.
 
 Decisions are recorded in [adr/](adr/). Known limits and their evidence are in [research/SUMMARY.md](research/SUMMARY.md).

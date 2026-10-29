@@ -18,5 +18,7 @@ This repo is built with several agents (Claude Code, OpenAI Codex, Google Antigr
 ## Layout
 
 - `device-server/`: Java, runs on the phone via `app_process` (derived from scrcpy-server, Apache-2.0)
-- `packages/`: TypeScript host SDK, CLI, test runner, MCP server
+- `packages/`: Python host SDK, CLI, test runner, MCP server
+- `integrations/`: drivers that run ARTEMIS / mobile-use on the hidden display
+- How third-party code is mixed in (adapt / depend / integrate) and attributed: [docs/adr/0003](docs/adr/0003-compose-open-source-stack.md)
 - `docs/`: architecture, roadmap, capability matrix, ADRs, research

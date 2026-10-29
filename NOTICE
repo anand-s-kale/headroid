@@ -6,11 +6,26 @@ This product is licensed under the Apache License, Version 2.0 (see LICENSE).
 Third-party components
 ----------------------
 
-Portions of the device server (device-server/) will be derived from scrcpy:
-  scrcpy, Copyright (C) 2018 Genymobile
-  Copyright (C) 2018-2026 Romain Vimont
-  Licensed under the Apache License, Version 2.0
-  https://github.com/Genymobile/scrcpy
+headroid combines several open-source projects (see docs/adr/0003-compose-open-source-stack.md).
+Files derived from them keep their original copyright headers and state the
+modifications made, as required by section 4 of the Apache License 2.0.
 
-Files derived from third-party sources keep their original copyright headers and
-state the modifications made, as required by section 4 of the Apache License 2.0.
+scrcpy (device-server/ is derived from scrcpy-server)
+  Copyright (C) 2018 Genymobile
+  Copyright (C) 2018-2026 Romain Vimont
+  Apache License, Version 2.0 - https://github.com/Genymobile/scrcpy
+
+ARTEMIS (selected host modules and integrations/artemis/)
+  Copyright 2026 Google LLC
+  Apache License, Version 2.0 - https://github.com/google/artemis
+
+mobile-use (selected host modules and integrations/mobile-use/)
+  Copyright 2025-2026 Minitap, Inc.
+  Apache License, Version 2.0 - https://github.com/minitap-ai/mobile-use
+
+Used as dependencies (not copied):
+  uiautomator2, adbutils - MIT - https://github.com/openatx
+  Model Context Protocol Python SDK - MIT - https://github.com/modelcontextprotocol/python-sdk
+
+Android SDK Platform-Tools (adb) are not redistributed with headroid; users install them
+separately under Google's Android SDK terms.

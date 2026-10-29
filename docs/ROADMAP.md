@@ -22,18 +22,21 @@ Goal: prove isolation on a real phone using stock tools before writing framework
 - [ ] Never swap the system default IME or use global accessibility actions such as BACK: both hit the owner's display
 - [ ] `headroid doctor`: probe what the connected phone supports
 
-## M2: TypeScript SDK and CLI
-- [ ] `Device`, `Page`, `Locator` with auto-wait; screenshots and video
+## M2: Python SDK and CLI
+- [ ] `Device`, `Page`, `Locator` with auto-wait; screenshots and video (on `adbutils`)
 - [ ] `headroid pair` / `connect` for wireless ADB, with reconnect on port change
+- [ ] Adapt useful ARTEMIS / mobile-use host modules with attribution (hierarchy parsing, device lock, diagnosis)
 
-## M3: Test runner
-- [ ] `@headroid/test`: fixtures, `expect`, retries, parallel pages (multiple hidden displays), HTML report, traces
+## M3: Agents on the hidden display
+- [ ] `integrations/artemis`: `HeadroidDriver(BaseDeviceDriver)`; run an ARTEMIS Flash task on display N; offer upstream
+- [ ] `integrations/mobile-use`: same for mobile-use's controller; offer upstream
+- [ ] `headroid.mcp` server: launch, observe, act, assert, report_bug
 
-## M4: AI agents
-- [ ] `@headroid/mcp` server: launch, observe, act, assert, report_bug
-- [ ] Exploratory "find bugs in this app" mode with Markdown bug reports and screenshots
+## M4: Test runner
+- [ ] `headroid.test` pytest plugin: fixtures, `expect`, retries, parallel pages (multiple hidden displays), HTML report, traces
+- [ ] Exploratory "find bugs in this app" mode (ARTEMIS Pro + headroid) with bug reports and screenshots
 
 ## M5: Frameworks and devices
 - [ ] React Native (testID → resource-id), then Flutter (semantics)
 - [ ] Capability matrix across Pixel, Samsung, Xiaomi, OnePlus/Oppo, Android 13–16
-- [ ] Python client
+- [ ] TypeScript client

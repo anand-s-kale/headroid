@@ -1,6 +1,6 @@
 # ADR 0002: Device server derived from scrcpy-server, TypeScript host
 
-Date: 2026-10-29 · Status: proposed (confirm after M0)
+Date: 2026-10-29 · Status: proposed (confirm after M0). Host language superseded by [ADR 0003](0003-compose-open-source-stack.md): Python-first.
 
 ## Context
 A non-root process must create a hidden virtual display, launch apps on it, inject input to it, capture it and read

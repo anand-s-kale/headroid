@@ -8,9 +8,12 @@ Research behind this list: [research/PRIOR-ART-claude.md](research/PRIOR-ART-cla
 | Project | Licence | How headroid uses it |
 |---|---|---|
 | [Genymobile/scrcpy](https://github.com/Genymobile/scrcpy) | Apache-2.0 | Base of the device server: `app_process` launch, hidden `DisplayManager` access, `--new-display`, input injection with display ids, display IME policy |
+| [google/artemis](https://github.com/google/artemis) | Apache-2.0 | Agent brain (Flash/Pro, planner, checker, reports, MCP). `integrations/artemis/` implements its `BaseDeviceDriver` for the hidden display; selected modules adapted |
+| [minitap-ai/mobile-use](https://github.com/minitap-ai/mobile-use) | Apache-2.0 | Agent for Android/iOS (ARTEMIS is partly derived from it). `integrations/mobile-use/` controller; selected modules adapted |
+| [openatx/adbutils](https://github.com/openatx/adbutils) | MIT | Python ADB client (dependency) |
 | [RikkaApps/Shizuku](https://github.com/RikkaApps/Shizuku) | Apache-2.0 | Reference for running privileged shell-uid services; possible on-phone mode later |
 | [appium/appium-uiautomator2-driver](https://github.com/appium/appium-uiautomator2-driver) | Apache-2.0 | `currentDisplayId` / multi-window hierarchy approach (Android 11+) |
-| [openatx/uiautomator2](https://github.com/openatx/uiautomator2) | MIT | Locator and selector design |
+| [openatx/uiautomator2](https://github.com/openatx/uiautomator2) | MIT | Dependency for hierarchy and selectors; locator design |
 | [microsoft/playwright](https://github.com/microsoft/playwright) | Apache-2.0 | API shape: locators, auto-wait, `expect`, traces, test runner |
 | [AOSP](https://source.android.com/) | Apache-2.0 | Primary source of truth for display, input, focus and IME behaviour |
 

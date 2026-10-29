@@ -34,11 +34,26 @@ Think of it as **Chrome Headless, but for native Android apps on a physical devi
    phone brand, stating what works without root and what doesn't.
 5. **Framework coverage:** native Android and React Native first, Flutter later.
 
+## Built from the best of open source
+
+headroid doesn't reinvent Android automation. It combines existing open-source tools and adds the missing piece:
+**running them on a hidden display**, so the phone stays yours.
+
+| Layer | Comes from |
+|---|---|
+| Agent "brain" (plan, act, check, report) | [ARTEMIS](https://github.com/google/artemis) and [mobile-use](https://github.com/minitap-ai/mobile-use), plugged in via drivers |
+| Hidden display, input, focus guard | [scrcpy](https://github.com/Genymobile/scrcpy) server, extended |
+| UI tree, selectors, ADB | [uiautomator2](https://github.com/openatx/uiautomator2), [adbutils](https://github.com/openatx/adbutils), Appium's multi-display approach |
+| Test API | Modelled on [Playwright](https://github.com/microsoft/playwright) |
+
+How each one is mixed in (adapted, used as a dependency, or plugged in) is in
+[ADR 0003](docs/adr/0003-compose-open-source-stack.md). Credits are in [NOTICE](NOTICE).
+
 ## How it works
 
 ```
-AI agent / test script
-        │  TypeScript SDK · CLI · MCP server             (your computer)
+ARTEMIS · mobile-use · test scripts · any MCP agent
+        │  Python SDK · test runner · CLI · MCP server     (your computer)
         ▼
 headroid controller ──── wireless ADB (adb pair / connect) ────┐
                                                                 ▼
@@ -76,18 +91,26 @@ You can help by [reporting your device](../../issues/new?template=device_report.
 
 ## Planned API (draft)
 
-```ts
-import { android, expect } from 'headroid';
+```python
+from headroid import android, expect
 
-const device = await android.connect({ host: '192.168.1.20:37099' });
-const page = await device.launch('com.example.shop', { display: 'hidden', size: '1080x2400' });
+device = android.connect("192.168.1.20:37099")
+page = device.launch("com.example.shop", display="hidden", size="1080x2400")
 
-await page.getByText('Sign in').tap();
-await page.getByHint('Phone number').fill('9876543210');
-await expect(page.getByText('Welcome')).toBeVisible();
-await page.screenshot({ path: 'welcome.png' });
+page.get_by_text("Sign in").tap()
+page.get_by_hint("Phone number").fill("9876543210")
+expect(page.get_by_text("Welcome")).to_be_visible()
+page.screenshot(path="welcome.png")
 
-await page.close();   // tears down the hidden display; the phone is untouched
+page.close()   # tears down the hidden display; the phone is untouched
+```
+
+Run an ARTEMIS agent in the background instead of on your screen (planned):
+
+```python
+from headroid.integrations.artemis import HeadroidDriver   # an ARTEMIS BaseDeviceDriver
+driver = HeadroidDriver(device="192.168.1.20:37099", display="hidden")
+# Pass the driver to ARTEMIS: Flash/Pro tasks now run on display N while you use the phone.
 ```
 
 ## Repository layout
@@ -95,7 +118,8 @@ await page.close();   // tears down the hidden display; the phone is untouched
 | Path | What lives there |
 |---|---|
 | [`device-server/`](device-server/) | On-device server (Java, `app_process`), derived from scrcpy-server |
-| [`packages/`](packages/) | Host side: TypeScript SDK, CLI, test runner, MCP server |
+| [`packages/`](packages/) | Host side: Python SDK, CLI, test runner, MCP server (TypeScript client later) |
+| [`integrations/`](integrations/) | Drivers that run ARTEMIS and mobile-use on the hidden display |
 | [`examples/`](examples/) | Sample tests for native and React Native apps |
 | [`docs/`](docs/) | Architecture, roadmap, capability matrix, decision records, research |
 
@@ -105,6 +129,9 @@ headroid stands on the shoulders of these projects. Full list and how each is us
 [docs/PRIOR-ART.md](docs/PRIOR-ART.md).
 
 - **[Genymobile/scrcpy](https://github.com/Genymobile/scrcpy)** (Apache-2.0): the device-server foundation (virtual display, input injection).
+- **[google/artemis](https://github.com/google/artemis)** (Apache-2.0): AI agent brain, driver interface, diagnosis; first integration target.
+- **[minitap-ai/mobile-use](https://github.com/minitap-ai/mobile-use)** (Apache-2.0): AI agent for real Android/iOS apps; ARTEMIS builds on it too.
+- **[openatx/adbutils](https://github.com/openatx/adbutils)** (MIT): Python ADB client.
 - **[RikkaApps/Shizuku](https://github.com/RikkaApps/Shizuku)** (Apache-2.0): reference for shell-privilege techniques.
 - **[appium/appium-uiautomator2-driver](https://github.com/appium/appium-uiautomator2-driver)** (Apache-2.0) and **[openatx/uiautomator2](https://github.com/openatx/uiautomator2)** (MIT): per-display UI hierarchy and locator ideas.
 - **[microsoft/playwright](https://github.com/microsoft/playwright)** (Apache-2.0): the API design we aim to feel like.
