@@ -10,10 +10,14 @@ headroid combines several open-source projects (see docs/adr/0003-compose-open-s
 Files derived from them keep their original copyright headers and state the
 modifications made, as required by section 4 of the Apache License 2.0.
 
-scrcpy (device-server/ is derived from scrcpy-server)
+scrcpy (device-server/ is a fork of scrcpy-server v4.1)
   Copyright (C) 2018 Genymobile
   Copyright (C) 2018-2026 Romain Vimont
   Apache License, Version 2.0 - https://github.com/Genymobile/scrcpy
+  Upstream files live under device-server/server/src/main/java/com/genymobile/scrcpy/
+  and the Gradle files in device-server/. Modified lines are marked "headroid:";
+  see device-server/README.md for the list of changes. Upstream licence text:
+  device-server/LICENSE-scrcpy.
 
 ARTEMIS (selected host modules and integrations/artemis/)
   Copyright 2026 Google LLC

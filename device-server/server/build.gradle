@@ -1,0 +1,42 @@
+// Derived from scrcpy server/build.gradle (Copyright (C) 2018 Genymobile, Apache-2.0).
+// headroid: application id, minSdk, version and headroid-server.jar output changed.
+apply plugin: 'com.android.application'
+
+android {
+    namespace = 'com.genymobile.scrcpy'
+    compileSdk = 36
+    defaultConfig {
+        applicationId = "dev.headroid.server"
+        minSdkVersion 29
+        targetSdkVersion 36
+        versionCode 100
+        versionName "0.1.0"
+        testInstrumentationRunner = "android.support.test.runner.AndroidJUnitRunner"
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+        }
+    }
+    buildFeatures {
+        buildConfig = true
+        aidl = true
+    }
+    lint {
+        disable 'UseRequiresApi'
+    }
+}
+
+dependencies {
+    testImplementation 'junit:junit:4.13.2'
+}
+
+// headroid: copy the release APK to build/headroid/headroid-server.jar (app_process reads the dex from it)
+tasks.register('headroidJar', Copy) {
+    dependsOn 'assembleRelease'
+    from(layout.buildDirectory.file('outputs/apk/release/server-release-unsigned.apk'))
+    into(layout.buildDirectory.dir('headroid'))
+    rename { 'headroid-server.jar' }
+}
+
+apply from: "$project.rootDir/config/android-checkstyle.gradle"
