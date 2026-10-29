@@ -5,7 +5,7 @@ labels: ["device-report"]
 body:
   - type: markdown
     attributes:
-      value: "Thanks! Reports fill the [capability matrix](https://github.com/MrAk47Anand007/headroid/blob/main/docs/CAPABILITY-MATRIX.md). Do not attach screenshots that show personal data."
+      value: "Thanks! Reports fill the [capability matrix](https://github.com/anand-s-kale/headroid/blob/main/docs/CAPABILITY-MATRIX.md). Do not attach screenshots that show personal data."
   - type: input
     id: device
     attributes:
