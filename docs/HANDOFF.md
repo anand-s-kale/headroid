@@ -77,10 +77,16 @@ never capture display 0, and keep screenshots of the hidden display only.
    display width for ~0.8 s), so the tap landed off-display and Android only said "failed". Fixed by: the smoke
    script waits for a node to be on screen and at the same bounds on two reads; the server rejects off-display
    touch points with `-32602 (x, y) is outside the WxH display`. The M2 `Locator` must do the same settle check.
-3. **Owner typing while tests run**: owner types in a chat app while a loop taps and types on the hidden display
-   (M0 method, 26 samples): focus and keyboard stay with the owner, no leaked keys.
-4. **Teardown**: `kill -9` the host mid-session, then the server process; after the grace period no `headroid`
-   display in `dumpsys display`, no sample activity on display 0, focus on display 0.
+3. **Owner typing while tests run** — **PASSED 2026-10-30**. Owner typed "AAAA" in their own app for 2 min while the
+   server typed "zqx " into the sample form on the hidden display (85 bursts, 0 errors). 26 samples every ~4 s:
+   `mTopFocusedDisplayId` 0 in 26/26, IME token display 0 in 26/26. Hidden field held only "zqx" text (screenshot);
+   owner confirmed their text was only A's and the keyboard behaved normally. (Re-tapping a misspelled word opened the
+   sample's spell-check popup and once replaced a word with "xerox": test-script artifact, stayed on the hidden display.)
+4. **Teardown** — **PASSED 2026-10-30** after one fix. Host killed hard: display and activities gone ~15 s later
+   (grace period). Server `kill -9`: gone within 3 s. Server SIGTERM: gone within 3 s, no hang. Focus on display 0
+   throughout. Found: after the grace teardown the server stayed alive listening forever (an orphan process on the
+   phone, which also made a later host attach to the stale server). Fixed: the server exits after the grace teardown
+   (not from inside the shutdown hook, where `System.exit` blocks). Smoke rerun after the fix: 8/8, no server left.
 5. **Effects leakage** (sample `EffectsActivity`): sound, vibration, toast, dialog, notification, permission prompt.
    Record what reaches the owner (muting is plan Task 1.8, not built yet: expected to leak today).
 6. **Smoothness**: `dumpsys gfxinfo <owner app> framestats` janky share and p95 with nothing / server idle / actions

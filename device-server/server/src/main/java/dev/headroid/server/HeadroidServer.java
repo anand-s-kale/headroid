@@ -40,13 +40,22 @@ public final class HeadroidServer {
     private final Session session = new Session();
     private final RpcDispatcher dispatcher = new RpcDispatcher();
     private final Watchdog watchdog;
+    private volatile boolean exiting;
 
     private HeadroidServer(String socketName, long graceMs, ScheduledExecutorService scheduler) {
         this.socketName = socketName;
         this.watchdog = new Watchdog((task, delayMs) -> {
             ScheduledFuture<?> future = scheduler.schedule(task, delayMs, TimeUnit.MILLISECONDS);
             return () -> future.cancel(false);
-        }, graceMs, session::teardown);
+        }, graceMs, () -> {
+            // no host came back within the grace period: release everything and leave nothing running on the phone
+            session.teardown();
+            // System.exit from inside a shutdown hook blocks forever
+            if (!exiting) {
+                Ln.i("Torn down, exiting");
+                System.exit(0);
+            }
+        });
         session.register(dispatcher);
         dispatcher.setObserver((method, durationMs, errorCode) -> {
             if (Ln.isEnabled(Ln.Level.DEBUG)) {
@@ -101,7 +110,10 @@ public final class HeadroidServer {
 
         ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
         HeadroidServer server = new HeadroidServer(socketName, graceMs, scheduler);
-        Runtime.getRuntime().addShutdownHook(new Thread(server.watchdog::teardownNow, "headroid-teardown"));
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            server.exiting = true;
+            server.watchdog.teardownNow();
+        }, "headroid-teardown"));
 
         Thread acceptThread = new Thread(() -> {
             try {
