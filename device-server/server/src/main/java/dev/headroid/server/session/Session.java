@@ -7,6 +7,7 @@ import dev.headroid.server.display.DisplayFlags;
 import dev.headroid.server.display.DisplayRegistry;
 import dev.headroid.server.display.HiddenDisplay;
 import dev.headroid.server.display.ScreenshotEncoder;
+import dev.headroid.server.input.Gestures;
 import dev.headroid.server.input.InputInjector;
 import dev.headroid.server.rpc.Params;
 import dev.headroid.server.rpc.RpcDispatcher;
@@ -92,15 +93,16 @@ public final class Session {
         });
 
         d.register("input.tap", p -> {
-            injector(p).tap(p.getInt("x"), p.getInt("y"));
+            injector(p, p.getInt("x"), p.getInt("y")).tap(p.getInt("x"), p.getInt("y"));
             return null;
         });
         d.register("input.longPress", p -> {
-            injector(p).longPress(p.getInt("x"), p.getInt("y"), p.optInt("durationMs", 600));
+            injector(p, p.getInt("x"), p.getInt("y")).longPress(p.getInt("x"), p.getInt("y"), p.optInt("durationMs", 600));
             return null;
         });
         d.register("input.swipe", p -> {
-            injector(p).swipe(p.getInt("x1"), p.getInt("y1"), p.getInt("x2"), p.getInt("y2"), p.optInt("durationMs", 300));
+            injector(p, p.getInt("x1"), p.getInt("y1"), p.getInt("x2"), p.getInt("y2"))
+                    .swipe(p.getInt("x1"), p.getInt("y1"), p.getInt("x2"), p.getInt("y2"), p.optInt("durationMs", 300));
             return null;
         });
         d.register("input.key", p -> {
@@ -129,6 +131,16 @@ public final class Session {
 
     private InputInjector injector(Params p) {
         return new InputInjector(displays.require(p.getInt("displayId")).id());
+    }
+
+    /** As {@link #injector(Params)}, first rejecting touch points outside the display. */
+    private InputInjector injector(Params p, int... xy) {
+        HiddenDisplay display = displays.require(p.getInt("displayId"));
+        String outside = Gestures.outsidePoint(display.width(), display.height(), xy);
+        if (outside != null) {
+            throw new RpcException(RpcException.INVALID_PARAMS, outside);
+        }
+        return new InputInjector(display.id());
     }
 
     private static Map<String, Object> describe(HiddenDisplay display) {

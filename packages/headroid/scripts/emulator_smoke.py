@@ -27,14 +27,30 @@ from headroid.adb import Adb
 PKG = "dev.headroid.sample"
 
 
+def on_screen(display, node) -> bool:
+    left, top, right, bottom = node["bounds"]
+    width, height = display.info["width"], display.info["height"]
+    return 0 <= left < right <= width and 0 <= top < bottom <= height
+
+
 def wait_for(display, timeout=20.0, **criteria):
+    """Waits until the node is visible, on screen and at the same bounds on two reads in a row.
+
+    During an activity transition the tree reports the incoming window's nodes at their animated position
+    (seen on a POCO F6: shifted right by the display width for ~0.8 s), so a tap on the first sighting misses.
+    """
     deadline = time.monotonic() + timeout
+    last = None
     while time.monotonic() < deadline:
         node = display.find(**criteria)
-        if node is not None and node.get("visible", True):
-            return node
-        time.sleep(0.3)
-    raise AssertionError(f"not found within {timeout}s: {criteria}")
+        if node is not None and node.get("visible", True) and on_screen(display, node):
+            if last is not None and node["bounds"] == last:
+                return node
+            last = node["bounds"]
+        else:
+            last = None
+        time.sleep(0.2)
+    raise AssertionError(f"not found on screen and settled within {timeout}s: {criteria}")
 
 
 def center(node):

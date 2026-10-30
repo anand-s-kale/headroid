@@ -68,12 +68,15 @@ needs an explicit `packages:` list on current runners (its default `tools` packa
 Run in this order; stop at the first failure. Check the foreground app first (`dumpsys window | grep mCurrentFocus`),
 never capture display 0, and keep screenshots of the hidden display only.
 
-1. **Build and install**: `device-server` `./gradlew :server:headroidJar`; install `sample-app` debug APK on the phone.
-2. **Smoke**: `python packages/headroid/scripts/emulator_smoke.py --serial <phone serial> --allow-device --jar ... --apk ...`
-   Expect every check true: launch and tree, PNG screenshot, login flow, Unicode text via `setText`,
-   `mTopFocusedDisplayId` 0 before and after, display 0 rejected, nothing left after teardown.
-   Likely first failures to watch: UiAutomation hidden constructor/`connect(int)` on Android 16 HyperOS
-   (`-32012`), `setDisplayImePolicy`, `injectInputEvent` WAIT_FOR_RESULT from shell.
+1. **Build and install** — **DONE 2026-10-30** (POCO F6, Android 16, wireless adb). Xiaomi refuses `adb install`
+   (`INSTALL_FAILED_USER_RESTRICTED`) until the owner turns on Developer options → "Install via USB".
+2. **Smoke** — **PASSED 2026-10-30, twice in a row**: all 8 checks true (launch and tree, PNG screenshot, login flow,
+   Unicode text via `setText`, `mTopFocusedDisplayId` 0 before and after, display 0 rejected, display and app gone
+   after teardown). UiAutomation, `setDisplayImePolicy` and WAIT_FOR_RESULT injection all work on HyperOS.
+   First run failed: the tree reports nodes of an incoming activity at their animated position (shifted right by the
+   display width for ~0.8 s), so the tap landed off-display and Android only said "failed". Fixed by: the smoke
+   script waits for a node to be on screen and at the same bounds on two reads; the server rejects off-display
+   touch points with `-32602 (x, y) is outside the WxH display`. The M2 `Locator` must do the same settle check.
 3. **Owner typing while tests run**: owner types in a chat app while a loop taps and types on the hidden display
    (M0 method, 26 samples): focus and keyboard stay with the owner, no leaked keys.
 4. **Teardown**: `kill -9` the host mid-session, then the server process; after the grace period no `headroid`

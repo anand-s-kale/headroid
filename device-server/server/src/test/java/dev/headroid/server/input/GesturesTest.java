@@ -22,6 +22,20 @@ public class GesturesTest {
     }
 
     @Test
+    public void pointsInsideTheDisplayPass() {
+        Assert.assertNull(Gestures.outsidePoint(720, 1600, 0, 0, 719, 1599, 360, 800));
+    }
+
+    @Test
+    public void firstPointOutsideTheDisplayIsReported() {
+        // a node read mid-transition: bounds shifted right by the display width
+        Assert.assertEquals("(1080, 136) is outside the 720x1600 display",
+                Gestures.outsidePoint(720, 1600, 360, 800, 1080, 136));
+        Assert.assertEquals("(-1, 5) is outside the 720x1600 display", Gestures.outsidePoint(720, 1600, -1, 5));
+        Assert.assertEquals("(10, 1600) is outside the 720x1600 display", Gestures.outsidePoint(720, 1600, 10, 1600));
+    }
+
+    @Test
     public void zeroDurationStillTwoPoints() {
         List<long[]> points = Gestures.swipePoints(0, 0, 50, 50, 0, 16);
         Assert.assertEquals(2, points.size());

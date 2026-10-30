@@ -12,6 +12,21 @@ public final class Gestures {
         // not instantiable
     }
 
+    /**
+     * Returns a message for the first {@code (x, y)} pair in {@code xy} outside a {@code width}x{@code height} display,
+     * or null when all are inside. Off-display touches reach no window, and Android only reports them as "failed".
+     */
+    public static String outsidePoint(int width, int height, int... xy) {
+        for (int i = 0; i + 1 < xy.length; i += 2) {
+            int x = xy[i];
+            int y = xy[i + 1];
+            if (x < 0 || y < 0 || x >= width || y >= height) {
+                return "(" + x + ", " + y + ") is outside the " + width + "x" + height + " display";
+            }
+        }
+        return null;
+    }
+
     /** Points {@code {timeMs, x, y}} of a straight swipe, from t=0 at the start to t=durationMs at the end. */
     public static List<long[]> swipePoints(int x1, int y1, int x2, int y2, int durationMs, int stepMs) {
         int duration = Math.max(0, durationMs);
