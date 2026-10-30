@@ -87,8 +87,18 @@ never capture display 0, and keep screenshots of the hidden display only.
    throughout. Found: after the grace teardown the server stayed alive listening forever (an orphan process on the
    phone, which also made a later host attach to the stale server). Fixed: the server exits after the grace teardown
    (not from inside the shutdown hook, where `System.exit` blocks). Smoke rerun after the fix: 8/8, no server left.
-5. **Effects leakage** (sample `EffectsActivity`): sound, vibration, toast, dialog, notification, permission prompt.
-   Record what reaches the owner (muting is plan Task 1.8, not built yet: expected to leak today).
+5. **Effects leakage** — **RECORDED 2026-10-30** (sample `EffectsActivity` on the hidden display; owner watching,
+   screen on, volume up, DND off; focus on display 0 throughout):
+   | Effect | Reaches the owner? | Evidence |
+   |---|---|---|
+   | Sound (`ToneGenerator`, STREAM_MUSIC) | **Yes** | owner heard it |
+   | Vibration | **Yes** | owner felt it |
+   | Toast (text toast, drawn by SystemUI) | No | toast window on the hidden display (screenshot), 3 tries, owner saw none |
+   | Dialog | No | dialog in the hidden display tree and screenshot; owner saw none |
+   | Notification | **Yes** | owner saw it in the notification shade; removed by the teardown force-stop |
+   | Camera permission prompt | No | permission controller drawn on the hidden display (screenshot); owner saw none |
+   Sound, vibration and notifications are what plan Task 1.8 must mute (app-ops with restore). Test-script note: find
+   dialog buttons by resource id (`android:id/button2`), not text; the displayed "CANCEL" did not match a text search.
 6. **Smoothness**: `dumpsys gfxinfo <owner app> framestats` janky share and p95 with nothing / server idle / actions
    every 1 s / screenshots every 1 s / `ui.tree` every 1 s (plan Task 1.12), plus the owner's feel of keyboard lag.
 7. **Long runs**: sample `TimerActivity` on the hidden display over Wi-Fi for 60 min with music and reels, then 30–60
