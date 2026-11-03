@@ -43,3 +43,16 @@ Legend: ✅ works · ⚠️ works with caveats · ❌ does not work · ❔ untes
 | Clean teardown on scrcpy exit | ✅ | focus back on display 0 |
 | Owner's phone stays smooth | ⚠️ | slight keyboard lag while the session ran (M1 item) |
 | Wireless ADB, screen off / locked, audio, `FLAG_SECURE` | ❔ | not tested yet |
+
+### Xiaomi POCO F6, Android 16, HyperOS: headroid M1 server (2026-10-30 to 2026-11-03, USB and wireless adb)
+
+| Capability | Result | Notes |
+|---|---|---|
+| Hidden display, launch, tap/swipe/key/text, screenshot, UI tree | ✅ | smoke script 8/8, repeated runs |
+| Owner keeps focus and keyboard while the hidden display types | ✅ | 26/26 samples on display 0 while the owner typed |
+| Teardown after host kill, server `kill -9`, server SIGTERM | ✅ | nothing left: display, app, server process |
+| Toast, dialog, permission prompt | ✅ stay hidden | |
+| Sound, vibration | ✅ muted | app-ops `PLAY_AUDIO`/`VIBRATE` ignore; vibration logged `ignored_app_ops`; restored after the session and after `kill -9` |
+| Notifications | ⚠️ opt-in | app-op is overridden by the permission on A13+; muted by revoking `POST_NOTIFICATIONS` |
+| Two sessions at once | ✅ | separate sockets and mute records; one does not unmute the other |
+| Install sample app over adb | ⚠️ | needs Developer options → "Install via USB" |

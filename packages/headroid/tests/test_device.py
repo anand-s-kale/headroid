@@ -51,3 +51,12 @@ def test_device_create_display_and_tap(fake_server):
     disp = dev.create_display()
     disp.tap(5, 6)
     assert ("input.tap", {"displayId": 1, "x": 5, "y": 6}) in fake_server.calls
+
+
+def test_launch_mutes_by_default(fake_server):
+    d = _display(fake_server)
+    d.launch("a.b")
+    d.launch("c.d", mute=False, mute_notifications=True)
+    launches = [p for m, p in fake_server.calls if m == "app.launch"]
+    assert launches[0]["mute"] is True and launches[0]["muteNotifications"] is False
+    assert launches[1]["mute"] is False and launches[1]["muteNotifications"] is True

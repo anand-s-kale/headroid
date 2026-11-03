@@ -16,6 +16,7 @@ class FakeServer:
     def __init__(self):
         self.calls: list[tuple[str, dict]] = []
         self.tree = []
+        self.no_frame = False
         outer = self
 
         class Handler(socketserver.StreamRequestHandler):
@@ -28,6 +29,8 @@ class FakeServer:
                         resp = {"error": {"code": -32010, "message": "no focused editable"}}
                     elif m == "ui.tree":
                         resp = {"result": {"displayId": 1, "nodes": outer.tree}}
+                    elif m == "display.screenshot" and outer.no_frame:
+                        resp = {"error": {"code": -32011, "message": "no frame yet"}}
                     elif m == "display.screenshot":
                         data = base64.b64encode(PNG).decode()
                         resp = {"result": {"width": 1, "height": 1, "format": "png", "data": data}}

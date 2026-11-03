@@ -6,7 +6,7 @@ from types import SimpleNamespace
 import pytest
 
 from headroid.adb import Adb, AdbError
-from headroid.server import MAIN_CLASS, REMOTE_JAR, ServerProcess
+from headroid.server import MAIN_CLASS, ServerProcess, remote_jar_path
 
 
 def _fake_run(devices_out="List of devices attached\nAAA\tdevice\n", forward_out="41234\n"):
@@ -69,7 +69,8 @@ def test_start_order(fake_server, tmp_path):
     sp = ServerProcess(FakeAdb(), str(jar))
     sp.start()
     assert [e[0] for e in log] == ["push", "shell", "forward"]
-    assert log[0][2] == REMOTE_JAR
+    assert log[0][2] == remote_jar_path(str(jar))
+    assert log[0][2].startswith("/data/local/tmp/headroid-server-")
     assert MAIN_CLASS in log[1][1] and "app_process" in log[1][1]
     assert "socket=headroid" in log[1][1]
     sp.stop()

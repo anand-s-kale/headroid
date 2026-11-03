@@ -12,11 +12,13 @@ from dataclasses import dataclass
 from .adb import Adb, AdbError, list_devices
 from .device import Device
 from .jar import BUILD_HINT, resolve_jar
+from .rpc import RpcError
 
 PASS, FAIL, WARN = "PASS", "FAIL", "WARN"
 MIN_API = 30
 VERIFIED_API = range(34, 37)  # Android 14-16
 PNG_MAGIC = b"\x89PNG\r\n\x1a\n"
+NO_FRAME = -32011
 
 
 @dataclass
@@ -172,18 +174,24 @@ def run_doctor(
             return checks
         try:
             display = dev.create_display()
+        except Exception as e:  # noqa: BLE001
+            add(FAIL, "hidden display", str(e), "report this with `adb logcat -s scrcpy`")
+            return checks
+        add(PASS, "hidden display", f"id {display.id}")
+        try:
             png = display.screenshot()
             if png[:8] == PNG_MAGIC:
                 add(PASS, "hidden display screenshot", f"{len(png)} bytes PNG")
             else:
                 add(FAIL, "hidden display screenshot", "not a PNG", "report this with adb logcat")
+        except RpcError as e:
+            if e.code == NO_FRAME:
+                # an empty display draws nothing, so there is no frame until an app is launched on it
+                add(PASS, "hidden display screenshot", "empty display, no frame until an app draws")
+            else:
+                add(FAIL, "hidden display screenshot", str(e), "report this with adb logcat")
         except Exception as e:  # noqa: BLE001
-            add(
-                FAIL,
-                "hidden display screenshot",
-                str(e),
-                "on Xiaomi enable USB debugging (Security settings)",
-            )
+            add(FAIL, "hidden display screenshot", str(e), "report this with adb logcat")
     finally:
         dev.close()  # releases the display
     return checks

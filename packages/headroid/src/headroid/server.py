@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import secrets
 import subprocess
 import time
@@ -11,8 +12,16 @@ import time
 from .adb import Adb, AdbError
 from .rpc import RpcClient, RpcError
 
-REMOTE_JAR = "/data/local/tmp/headroid-server.jar"
+REMOTE_DIR = "/data/local/tmp"
 MAIN_CLASS = "dev.headroid.server.HeadroidServer"
+
+
+def remote_jar_path(jar_path: str) -> str:
+    """Where the jar goes on the phone, named by its content so a push never overwrites a jar that another
+    running server (another session, another headroid version) still has open."""
+    with open(jar_path, "rb") as f:
+        digest = hashlib.sha256(f.read()).hexdigest()[:12]
+    return f"{REMOTE_DIR}/headroid-server-{digest}.jar"
 
 
 class ServerProcess:
@@ -25,8 +34,9 @@ class ServerProcess:
         self.client: RpcClient | None = None
 
     def start(self, connect_timeout: float = 10) -> RpcClient:
-        self.adb.push(self.jar_path, REMOTE_JAR)
-        cmd = f"CLASSPATH={REMOTE_JAR} app_process / {MAIN_CLASS} socket={self.socket}"
+        remote = remote_jar_path(self.jar_path)
+        self.adb.push(self.jar_path, remote)
+        cmd = f"CLASSPATH={remote} app_process / {MAIN_CLASS} socket={self.socket}"
         self.proc = self.adb.popen_shell(cmd)
         self.port = self.adb.forward(f"localabstract:{self.socket}")
         deadline = time.monotonic() + connect_timeout

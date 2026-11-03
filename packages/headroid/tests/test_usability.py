@@ -283,3 +283,13 @@ def test_cli_doctor_exit_codes(monkeypatch, capsys):
     _fake_adb(monkeypatch, adb_missing=True)
     assert cli.main(["doctor"]) == 1
     assert "[FAIL] adb on PATH" in capsys.readouterr().out
+
+
+def test_doctor_empty_display_without_frame_passes(monkeypatch, fake_server, jar_file):
+    # a fresh hidden display has drawn nothing yet: that is healthy, not a failure
+    _fake_adb(monkeypatch)
+    fake_server.no_frame = True
+    checks = doctor.run_doctor("ABC123", jar_file, connect=_connect_factory(fake_server))
+    st = _status(checks)
+    assert st["hidden display"] == "PASS" and st["hidden display screenshot"] == "PASS"
+    assert doctor.ok(checks)

@@ -7,8 +7,33 @@ headroid is an open-source, Playwright-style automation framework for native And
 screenshots and UI inspection all target that hidden display, so the phone's real screen stays yours: WhatsApp, YouTube
 and Instagram keep working while an AI agent or a test suite exercises your app in the background.
 
-> **Status: pre-alpha.** The research is done ([docs/research](docs/research/SUMMARY.md)). No runnable code yet.
-> The first milestone is a proof of concept on real phones. See the [roadmap](docs/ROADMAP.md).
+> **Status: alpha, works on a real phone.** The device server and Python SDK run end to end on a POCO F6
+> (Android 16, HyperOS) over USB and wireless adb: hidden display, app launch, taps and typing, screenshots, UI tree,
+> sound/vibration muting and clean teardown after crashes. Other phones are untested so far:
+> [report yours](../../issues/new?template=device_report.yml). See the [roadmap](docs/ROADMAP.md).
+
+## Try it in 2 minutes
+
+```
+pip install headroid-0.1.0-py3-none-any.whl     # from the latest GitHub release; the server jar is inside
+headroid doctor                                 # checks adb, the phone and the server, with a fix for each problem
+headroid launch com.your.app --screenshot shot.png
+```
+
+```python
+from headroid import Device
+
+with Device.connect() as dev:
+    d = dev.create_display()          # hidden: nothing appears on your screen
+    d.launch("com.your.app")          # sound and vibration muted until the session ends
+    d.click(text="Sign in")           # waits until the element has settled, then taps it
+    d.fill("me@example.com", rid="email")
+    d.wait_for(text="Welcome")
+    d.screenshot("welcome.png")
+```
+
+Full guide: [packages/headroid](packages/headroid/README.md). Xiaomi/Redmi/POCO need two extra switches in Developer
+options; `headroid doctor` tells you which.
 
 ---
 
@@ -73,20 +98,24 @@ a non-root shell process can create a virtual display, launch apps on it and inj
 missing pieces: focus-steal protection, keyboard isolation, per-display UI trees, a test API, and agent tools.
 Details: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
-## What we expect to work (to be verified on devices)
+## What works
 
-| Capability | Non-root | Notes |
+Verified on a POCO F6 (Android 16, HyperOS); other phones are expected to behave alike on Android 14+ but are
+untested. Details per device: [capability matrix](docs/CAPABILITY-MATRIX.md).
+
+| Capability | POCO F6, Android 16 | Notes |
 |---|---|---|
-| Hidden virtual display + launch any app on it | ✅ Android 10+ | Trusted display needs Android 13+ |
-| Taps, swipes, keys only on the hidden display | ✅ | Physical touchscreen unaffected |
-| Keep user's focus/keyboard while agent taps | ⚠️ Android 14+ | `STEAL_TOP_FOCUS_DISABLED`; dialogs/launches can still leak |
-| Keyboard hidden on the test display, text injected directly | ⚠️ Android 13+ | Shared IME service; measure interference |
-| Screenshots / video of the hidden display | ✅ | From our own ImageReader |
-| UI tree of the hidden display | ✅ Android 11+ | Accessibility windows per display |
-| Apps with `FLAG_SECURE` (banking) | ❌ | Screenshots are black without root |
-| Separate audio / notifications | ❌ | Shared with the owner; mute per app |
+| Hidden virtual display + launch any app on it | ✅ verified | Trusted display needs Android 13+ |
+| Taps, swipes, keys, text only on the hidden display | ✅ verified | Physical touchscreen unaffected |
+| Owner keeps focus and keyboard while tests type | ✅ verified | 26/26 samples while the owner typed; Android 14+ only |
+| Screenshots and UI tree of the hidden display | ✅ verified | ~0.1–0.2 s per screenshot over Wi-Fi |
+| Toasts, dialogs, permission prompts stay hidden | ✅ verified | |
+| Sound and vibration muted | ✅ verified | per app (app-ops), restored after the session, also after a crash |
+| Notifications | ⚠️ opt-in | reach the owner unless `mute_notifications=True` |
+| Clean teardown after host or server crash | ✅ verified | nothing left on the phone after ~15 s |
+| Several sessions on one phone | ✅ verified | separate server, socket and mute records each |
+| Apps with `FLAG_SECURE` (banking) | ❌ | screenshots are black without root |
 
-Everything above is **unverified on hardware** until the [capability matrix](docs/CAPABILITY-MATRIX.md) says otherwise.
 You can help by [reporting your device](../../issues/new?template=device_report.yml).
 
 ## Planned API (draft)

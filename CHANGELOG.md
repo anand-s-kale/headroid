@@ -12,3 +12,12 @@ All notable changes are recorded here. Format: [Keep a Changelog](https://keepac
 - M1 device server (`device-server/`): fork of scrcpy-server v4.1 (the M0 patch is now in tree) with JSON-RPC,
   hidden displays, per-display input, screenshots, UI tree and teardown. Unit-tested; not yet run on a device.
 - Python host skeleton (`packages/headroid`) and an emulator/phone smoke script.
+- Verified on a POCO F6 (Android 16): smoke 8/8, owner typing isolation, crash teardown, effects leakage.
+- Sound and vibration of the app under test muted by default (app-ops), restored at stop, teardown and after a crash;
+  notifications muted on request (`mute_notifications=True`).
+- `Display.wait_for` / `click` / `fill` with settle detection; `headroid doctor`, `devices` and `launch` commands.
+- The wheel bundles the server jar; a `release` workflow builds it and attaches it to `v*` releases.
+- Several sessions can share a phone: unique server socket, content-named jar on the device, per-server mute records.
+### Fixed
+- Taps on nodes read mid-transition landed off-display; off-display points are now rejected with a clear error.
+- The server stayed alive after the grace-period teardown; it now exits.

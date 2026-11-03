@@ -3,6 +3,7 @@
 package dev.headroid.server.session;
 
 import dev.headroid.server.apps.AppLauncher;
+import dev.headroid.server.apps.AppMuter;
 import dev.headroid.server.display.DisplayFlags;
 import dev.headroid.server.display.DisplayRegistry;
 import dev.headroid.server.display.HiddenDisplay;
@@ -41,6 +42,7 @@ public final class Session {
     private final DisplayRegistry<HiddenDisplay> displays = new DisplayRegistry<>();
     private final Set<String> launchedPackages = Collections.synchronizedSet(new LinkedHashSet<>());
     private final UiAutomationHost uiAutomation = new UiAutomationHost();
+    private final AppMuter muter = AppMuter.recover();
     private volatile boolean shutdownRequested;
 
     public boolean isShutdownRequested() {
@@ -83,12 +85,19 @@ public final class Session {
         d.register("app.launch", p -> {
             int displayId = displays.require(p.getInt("displayId")).id();
             String pkg = p.getString("package");
+            if (p.optBool("mute", true)) {
+                // before the launch, so even the first sound is silenced
+                muter.mute(pkg, p.optBool("muteNotifications", false));
+            }
             AppLauncher.launch(displayId, pkg, p.optString("activity", null), p.optBool("forceStop", false));
             launchedPackages.add(pkg);
             return null;
         });
         d.register("app.stop", p -> {
-            AppLauncher.stop(p.getString("package"));
+            String pkg = p.getString("package");
+            AppLauncher.stop(pkg);
+            launchedPackages.remove(pkg);
+            muter.restore(pkg);
             return null;
         });
 
@@ -158,6 +167,7 @@ public final class Session {
         capabilities.put("fullIsolation", sdk >= 34);
         capabilities.put("perDisplayInput", sdk >= 29);
         capabilities.put("uiTree", sdk >= 30);
+        capabilities.put("muting", true);
         capabilities.put("displayFlags", DisplayFlags.describe(DisplayFlags.forSdk(sdk)));
 
         Map<String, Object> info = new LinkedHashMap<>();
@@ -174,7 +184,7 @@ public final class Session {
 
     /**
      * Teardown order: stop the apps launched on hidden displays, then release the displays (their remaining content is
-     * destroyed, never moved to display 0), then give up the UiAutomation connection.
+     * destroyed, never moved to display 0), then give up the UiAutomation connection, then unmute the apps.
      */
     public void teardown() {
         Ln.i("Teardown");
@@ -192,5 +202,6 @@ public final class Session {
         }
         displays.releaseAll();
         uiAutomation.disconnect();
+        muter.restoreAll();
     }
 }

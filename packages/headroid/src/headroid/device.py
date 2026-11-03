@@ -30,8 +30,28 @@ class Display:
         self._clock = clock
         self._sleep = sleep
 
-    def launch(self, package: str, activity: str | None = None) -> None:
-        self._c.call("app.launch", displayId=self.id, package=package, activity=activity)
+    def launch(
+        self,
+        package: str,
+        activity: str | None = None,
+        mute: bool = True,
+        mute_notifications: bool = False,
+    ) -> None:
+        """Starts the app on this display.
+
+        mute: silence its sound and vibration (app-ops, restored when the app is stopped or the session ends).
+        mute_notifications: also block its notifications by revoking the notification permission. The app
+        can see this and may ask for the permission again, so it is off by default; skipped if the app is
+        already running.
+        """
+        self._c.call(
+            "app.launch",
+            displayId=self.id,
+            package=package,
+            activity=activity,
+            mute=mute,
+            muteNotifications=mute_notifications,
+        )
 
     def tap(self, x: int, y: int) -> None:
         self._c.call("input.tap", displayId=self.id, x=x, y=y)

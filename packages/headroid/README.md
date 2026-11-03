@@ -5,12 +5,17 @@ needs `adb` on PATH and an Android 11+ phone with USB debugging on (Android 14-1
 
 ## 1. Install
 
+headroid is not on PyPI yet. Install the wheel from the latest
+[GitHub release](https://github.com/anand-s-kale/headroid/releases) (or the `headroid-wheel` artifact of the
+`release` workflow):
+
 ```
-pip install headroid
+pip install headroid-0.1.0-py3-none-any.whl
 ```
 
-The wheel bundles the device-server jar, so there is nothing else to build. (From a source checkout, build
-the jar with `cd device-server && ./gradlew :server:headroidJar`, or set `HEADROID_SERVER_JAR`.)
+The wheel bundles the device-server jar, so there is nothing else to build. From a source checkout instead:
+`cd device-server && ./gradlew :server:headroidJar`, then `pip install -e packages/headroid`; the jar is found
+in the build folder (or set `HEADROID_SERVER_JAR`).
 
 ## 2. Check your setup
 
@@ -55,6 +60,18 @@ with Device.connect() as dev:                      # jar found automatically
 until the node is visible, fully on the display and at the same position on two reads in a row, because
 during an activity transition nodes are reported at animated positions and an immediate tap misses.
 Lower-level calls (`tap`, `swipe`, `key`, `type`, `tree`, `find`) are also available.
+
+## What stays with you, and what does not
+
+- Taps, typing and the keyboard go to the hidden display only; your screen keeps focus.
+- `launch` mutes the app's **sound and vibration** (app-ops) and restores them when the app is stopped or the
+  session ends, even if the server was killed (the next server start restores them). Pass `mute=False` to hear it.
+  App-ops are per app: while muted, the same app is silent on your screen too.
+- **Notifications** still reach your notification shade by default. `launch(..., mute_notifications=True)` blocks
+  them by revoking the notification permission while the session runs; the app can see that and may ask for the
+  permission again, so it is opt-in, and it is skipped when the app is already running.
+- Toasts, dialogs and permission prompts appear on the hidden display.
+- Several sessions can share one phone: each gets its own server socket and its own mute records.
 
 ## Other commands
 

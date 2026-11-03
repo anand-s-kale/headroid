@@ -63,6 +63,21 @@ Environment notes added this session: an AVD `headroid_api36` (Android 16 / 36.1
 not been booted to completion; headless it runs as `qemu-system-x86_64-headless.exe`. `android-actions/setup-android@v3`
 needs an explicit `packages:` list on current runners (its default `tools` package fails).
 
+## Session 2026-11-03: usable by others
+
+- Muting (plan Task 1.8, part): `AppMuter` + `AppOpsLedger` (unit-tested). `app.launch` mutes `PLAY_AUDIO` and
+  `VIBRATE` by default (`mute:false` to opt out); `muteNotifications:true` revokes `POST_NOTIFICATIONS` (only when the
+  app is not running, since revoking kills it). Original modes go to `/data/local/tmp/headroid-appops-<pid>.txt`
+  before any change; restored on `app.stop`, teardown, and by the next server start when that pid is gone.
+  `TOAST_WINDOW` dropped: text toasts are drawn by SystemUI on the app's display and never leaked.
+  Verified on the POCO F6 over wireless adb: default, opt-in notifications, `kill -9` recovery, two servers at once.
+- Host (merged from `claude/host-usability`): jar resolution (arg, env, wheel, source build), `wait_for`/`click`/
+  `fill`, `doctor`/`devices`/`launch`, unique socket per session; jar pushed to a content-named path.
+  Wheel built locally and installed in a clean venv: `doctor` all PASS and `launch` worked on the phone while
+  another session was running.
+- Not done: PyPI publish (owner decision), focus check / leak watch part of Task 1.8, governor (1.9), video (1.10),
+  smoothness measurement with the owner (step 6), screen-off long run (7b).
+
 ## On-device checklist for the next session with the owner
 
 Run in this order; stop at the first failure. Check the foreground app first (`dumpsys window | grep mCurrentFocus`),
