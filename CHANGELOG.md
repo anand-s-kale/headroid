@@ -3,6 +3,9 @@
 All notable changes are recorded here. Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
+
+## [0.1.0a1] - 2026-11-03
+First alpha on PyPI: `pip install --pre headroid`.
 ### Added
 - Project charter, architecture, roadmap, capability matrix, clean-room policy and research reports.
 - M0 proof of concept on a POCO F6 (Android 16): GO. scrcpy-server patch adding `STEAL_TOP_FOCUS_DISABLED`

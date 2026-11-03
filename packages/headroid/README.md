@@ -5,13 +5,12 @@ needs `adb` on PATH and an Android 11+ phone with USB debugging on (Android 14-1
 
 ## 1. Install
 
-headroid is not on PyPI yet. Install the wheel from the latest
-[GitHub release](https://github.com/anand-s-kale/headroid/releases) (or the `headroid-wheel` artifact of the
-`release` workflow):
+```
+pip install --pre headroid
+```
 
-```
-pip install headroid-0.1.0-py3-none-any.whl
-```
+(`--pre` while headroid is an alpha. The wheel is also attached to each
+[GitHub release](https://github.com/anand-s-kale/headroid/releases).)
 
 The wheel bundles the device-server jar, so there is nothing else to build. From a source checkout instead:
 `cd device-server && ./gradlew :server:headroidJar`, then `pip install -e packages/headroid`; the jar is found

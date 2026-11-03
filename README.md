@@ -15,7 +15,7 @@ and Instagram keep working while an AI agent or a test suite exercises your app 
 ## Try it in 2 minutes
 
 ```
-pip install headroid-0.1.0-py3-none-any.whl     # from the latest GitHub release; the server jar is inside
+pip install --pre headroid                      # alpha; the server jar is inside the package
 headroid doctor                                 # checks adb, the phone and the server, with a fix for each problem
 headroid launch com.your.app --screenshot shot.png
 ```
