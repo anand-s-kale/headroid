@@ -130,7 +130,11 @@ never capture display 0, and keep screenshots of the hidden display only.
    | Camera permission prompt | No | permission controller drawn on the hidden display (screenshot); owner saw none |
    Sound, vibration and notifications are what plan Task 1.8 must mute (app-ops with restore). Test-script note: find
    dialog buttons by resource id (`android:id/button2`), not text; the displayed "CANCEL" did not match a text search.
-6. **Smoothness**: `dumpsys gfxinfo <owner app> framestats` janky share and p95 with nothing / server idle / actions
+6. **Smoothness** — **PASSED 2026-11-03** (Instagram in front, owner scrolling, 90 s per stage, wireless adb):
+   0 janky frames in every stage; p95 6 ms nothing / 6 idle / 6 taps / 7 screenshots / 6 UI reads every 1 s.
+   First run: UI reads every 1 s gave p99 38 ms because UiAutomation reconnected 64 times in 90 s (idle release
+   1 s); with 5 s idle release, 1 connect and p99 9 ms. Owner: nothing felt laggy. Plan Task 1.12 done.
+   Original plan:  `dumpsys gfxinfo <owner app> framestats` janky share and p95 with nothing / server idle / actions
    every 1 s / screenshots every 1 s / `ui.tree` every 1 s (plan Task 1.12), plus the owner's feel of keyboard lag.
 7. **Long runs**: sample `TimerActivity` on the hidden display over Wi-Fi for 60 min with music and reels, then 30–60
    min screen off; record battery and temperature at start and end.

@@ -55,4 +55,5 @@ Legend: ✅ works · ⚠️ works with caveats · ❌ does not work · ❔ untes
 | Sound, vibration | ✅ muted | app-ops `PLAY_AUDIO`/`VIBRATE` ignore; vibration logged `ignored_app_ops`; restored after the session and after `kill -9` |
 | Notifications | ⚠️ opt-in | app-op is overridden by the permission on A13+; muted by revoking `POST_NOTIFICATIONS` |
 | Two sessions at once | ✅ | separate sockets and mute records; one does not unmute the other |
+| Owner's phone stays smooth | ✅ | Instagram in front, 90 s per load: 0 janky frames, p95 6-7 ms with taps, screenshots or UI reads every second (p99 9-11 ms); owner felt no lag |
 | Install sample app over adb | ⚠️ | needs Developer options → "Install via USB" |

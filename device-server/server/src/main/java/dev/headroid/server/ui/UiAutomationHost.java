@@ -39,7 +39,9 @@ import java.util.List;
 public final class UiAutomationHost {
 
     private static final long WAIT_FOR_IDLE_MS = 300;
-    static final long IDLE_RELEASE_MS = 1000;
+    // long enough that a session reading every second keeps it: each connect turns accessibility on for every app on
+    // the phone, and reconnecting every second made the owner's app drop frames (POCO F6, p99 9 -> 38 ms)
+    static final long IDLE_RELEASE_MS = 5000;
     static final long BUSY_WAIT_MS = 10000;
     private static final long BUSY_RETRY_MS = 200;
 

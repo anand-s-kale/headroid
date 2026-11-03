@@ -22,6 +22,8 @@ First alpha on PyPI: `pip install --pre headroid`.
 - The wheel bundles the server jar; a `release` workflow builds it and attaches it to `v*` releases.
 - Several sessions can share a phone: unique server socket, content-named jar on the device, per-server mute records.
 ### Fixed
+- Reading the UI every second reconnected UiAutomation each time, which turns accessibility on for every app and
+  made the owner's app drop frames (p99 9 to 38 ms); the connection is now kept for 5 s idle (p99 back to 9 ms).
 - A wireless adb drop killed the server (it ran as a child of the adb shell) and left the host waiting; the server
   now runs detached, keeps the session for 60 s, and the host reconnects, also when the phone returns under another
   adb serial.

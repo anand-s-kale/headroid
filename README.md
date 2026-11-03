@@ -110,13 +110,14 @@ untested. Details per device: [capability matrix](docs/CAPABILITY-MATRIX.md).
 | Owner keeps focus and keyboard while tests type | ✅ verified | 26/26 samples while the owner typed; Android 14+ only |
 | Screenshots and UI tree of the hidden display | ✅ verified | ~0.1–0.2 s per screenshot over Wi-Fi |
 | Toasts, dialogs, permission prompts stay hidden | ✅ verified | |
+| Owner's phone stays smooth | ✅ verified | Instagram: 0 janky frames with taps, screenshots or UI reads every second; owner felt no lag |
 | Sound and vibration muted | ✅ verified | per app (app-ops), restored after the session, also after a crash |
 | Notifications | ⚠️ opt-in | reach the owner unless `mute_notifications=True` |
 | Wi-Fi drop during a session | ✅ verified | the server outlives the adb connection; the host reconnects (6 s in the test) and resends reads |
 | Clean teardown after host or server crash | ✅ verified | nothing left on the phone after the 60 s grace period |
 | Several sessions on one phone | ✅ verified | separate server, socket and mute records; one never kills an app another uses |
 | Your own copy of the app under test | ✅ verified | not force-stopped at the end when it was already running (only the hidden screen closes) |
-| Appium / `uiautomator` / Maestro alongside | ⚠️ | they share one UiAutomation with headroid: it is held only while reading the screen and waited for up to 10 s |
+| Appium / `uiautomator` / Maestro alongside | ⚠️ | they share one UiAutomation with headroid: it is held only while reading the screen (released after 5 s idle) and waited for up to 10 s |
 | Apps with `FLAG_SECURE` (banking) | ❌ | screenshots are black without root |
 
 You can help by [reporting your device](../../issues/new?template=device_report.yml).

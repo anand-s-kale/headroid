@@ -77,7 +77,7 @@ Lower-level calls (`tap`, `swipe`, `key`, `type`, `tree`, `find`) are also avail
 - At the end, an app is force-stopped only if headroid started it and nobody else has it open. If it was already
   running (your copy on the phone, or another session's), only the hidden display is closed and the app keeps running.
 - Android has one UiAutomation (used for the UI tree and `setText` typing) for every tool on the phone. headroid holds it
-  only while reading the screen and releases it after 1 s idle; when another tool (Appium, `uiautomator`, Maestro,
+  only while reading the screen and releases it after 5 s idle; when another tool (Appium, `uiautomator`, Maestro,
   another session) holds it, a tree read waits up to 10 s, then fails with a message naming the cause.
 
 ## Other commands
