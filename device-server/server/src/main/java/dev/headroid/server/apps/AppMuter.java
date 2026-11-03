@@ -112,7 +112,7 @@ public final class AppMuter {
         }
     }
 
-    private static boolean isRunning(String pkg) throws IOException {
+    static boolean isRunning(String pkg) throws IOException {
         try {
             return !run("pidof", pkg).trim().isEmpty();
         } catch (IOException e) {
@@ -148,7 +148,7 @@ public final class AppMuter {
         run("cmd", "appops", "set", pkg, op, mode);
     }
 
-    private static String run(String... cmd) throws IOException {
+    static String run(String... cmd) throws IOException {
         Process process = new ProcessBuilder(cmd).redirectErrorStream(true).start();
         try {
             String out = readAll(process.getInputStream());

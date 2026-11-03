@@ -75,6 +75,12 @@ needs an explicit `packages:` list on current runners (its default `tools` packa
   `fill`, `doctor`/`devices`/`launch`, unique socket per session; jar pushed to a content-named path.
   Wheel built locally and installed in a clean venv: `doctor` all PASS and `launch` worked on the phone while
   another session was running.
+- Shared phone (found by the long run: a second session's `launch` force-stopped the first one's app): teardown
+  releases displays first, then force-stops only when the app was not in use before launch (`am get-uid-state`, cached
+  counts as not in use) and has no activities on displays this session does not own (`AppPresence`, unit-tested).
+  `app.stop` returns `{stopped, reason}`. UiAutomation is leased per call (released after 1 s idle, waits up to 10 s
+  when busy). Verified: two sessions on one app, `uiautomator dump` alongside, smoke 8/8, no process left.
+  Follow-up: one shared server per phone multiplexing sessions would remove the UiAutomation contention entirely.
 - Not done: PyPI publish (owner decision), focus check / leak watch part of Task 1.8, governor (1.9), video (1.10),
   smoothness measurement with the owner (step 6), screen-off long run (7b).
 

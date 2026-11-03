@@ -27,19 +27,87 @@ import java.util.List;
 
 /**
  * A {@link UiAutomation} connected from the shell process, like the {@code uiautomator} tool does, used to read the
- * windows of one display. Only one UiAutomation can be connected on a phone at a time, so it is connected lazily and
- * disconnected on teardown.
+ * windows of one display.
+ *
+ * <p>Android allows one UiAutomation connection per phone, shared by every tool: other headroid sessions, Appium,
+ * {@code uiautomator}, Maestro. So it is held only while in use: callers wrap their work in {@link #lease}, the
+ * connection is dropped after {@link #IDLE_RELEASE_MS} without use, and a lease waits up to {@link #BUSY_WAIT_MS} while
+ * someone else holds it.
  *
  * <p>Built from the public {@code UiAutomation} API plus its hidden constructor and {@code connect(int)} (AOSP).
  */
 public final class UiAutomationHost {
 
     private static final long WAIT_FOR_IDLE_MS = 300;
+    static final long IDLE_RELEASE_MS = 1000;
+    static final long BUSY_WAIT_MS = 10000;
+    private static final long BUSY_RETRY_MS = 200;
 
     private HandlerThread thread;
     private UiAutomation uiAutomation;
+    private int leases;
+    private long lastUse;
+    private Thread releaser;
 
-    public synchronized UiAutomation get() {
+    /** Runs {@code body} with the connection held; it may be dropped once no lease has used it for a while. */
+    public <R> R lease(java.util.function.Supplier<R> body) {
+        synchronized (this) {
+            leases++;
+        }
+        try {
+            acquire();
+            return body.get();
+        } finally {
+            synchronized (this) {
+                leases--;
+                lastUse = android.os.SystemClock.uptimeMillis();
+                scheduleRelease();
+            }
+        }
+    }
+
+    private void acquire() {
+        long deadline = android.os.SystemClock.uptimeMillis() + BUSY_WAIT_MS;
+        while (true) {
+            try {
+                get();
+                return;
+            } catch (RpcException e) {
+                // "UiAutomationService ... already registered": another tool holds it; wait for it to let go
+                boolean busy = String.valueOf(e.getMessage()).contains("already registered");
+                if (!busy || android.os.SystemClock.uptimeMillis() >= deadline) {
+                    if (busy) {
+                        throw new RpcException(RpcException.UIA_UNAVAILABLE, "UiAutomation is held by another tool "
+                                + "(Appium, uiautomator, Maestro or another headroid session) for over " + BUSY_WAIT_MS + " ms");
+                    }
+                    throw e;
+                }
+                android.os.SystemClock.sleep(BUSY_RETRY_MS);
+            }
+        }
+    }
+
+    private void scheduleRelease() {
+        if (releaser != null || uiAutomation == null) {
+            return;
+        }
+        releaser = new Thread(() -> {
+            while (true) {
+                android.os.SystemClock.sleep(IDLE_RELEASE_MS);
+                synchronized (UiAutomationHost.this) {
+                    if (leases == 0 && android.os.SystemClock.uptimeMillis() - lastUse >= IDLE_RELEASE_MS) {
+                        releaser = null;
+                        disconnectLocked();
+                        return;
+                    }
+                }
+            }
+        }, "headroid-uia-release");
+        releaser.setDaemon(true);
+        releaser.start();
+    }
+
+    private synchronized UiAutomation get() {
         if (uiAutomation == null) {
             uiAutomation = connect();
         }
@@ -146,7 +214,12 @@ public final class UiAutomationHost {
     }
 
     public synchronized void disconnect() {
+        disconnectLocked();
+    }
+
+    private void disconnectLocked() {
         if (uiAutomation != null) {
+            Ln.i("UiAutomation released");
             try {
                 Method disconnect = UiAutomation.class.getDeclaredMethod("disconnect");
                 disconnect.setAccessible(true);

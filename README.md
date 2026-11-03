@@ -113,7 +113,9 @@ untested. Details per device: [capability matrix](docs/CAPABILITY-MATRIX.md).
 | Sound and vibration muted | ✅ verified | per app (app-ops), restored after the session, also after a crash |
 | Notifications | ⚠️ opt-in | reach the owner unless `mute_notifications=True` |
 | Clean teardown after host or server crash | ✅ verified | nothing left on the phone after ~15 s |
-| Several sessions on one phone | ✅ verified | separate server, socket and mute records each |
+| Several sessions on one phone | ✅ verified | separate server, socket and mute records; one never kills an app another uses |
+| Your own copy of the app under test | ✅ verified | not force-stopped at the end when it was already running (only the hidden screen closes) |
+| Appium / `uiautomator` / Maestro alongside | ⚠️ | they share one UiAutomation with headroid: it is held only while reading the screen and waited for up to 10 s |
 | Apps with `FLAG_SECURE` (banking) | ❌ | screenshots are black without root |
 
 You can help by [reporting your device](../../issues/new?template=device_report.yml).

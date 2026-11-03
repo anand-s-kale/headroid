@@ -72,6 +72,11 @@ Lower-level calls (`tap`, `swipe`, `key`, `type`, `tree`, `find`) are also avail
   permission again, so it is opt-in, and it is skipped when the app is already running.
 - Toasts, dialogs and permission prompts appear on the hidden display.
 - Several sessions can share one phone: each gets its own server socket and its own mute records.
+- At the end, an app is force-stopped only if headroid started it and nobody else has it open. If it was already
+  running (your copy on the phone, or another session's), only the hidden display is closed and the app keeps running.
+- Android has one UiAutomation (used for the UI tree and `setText` typing) for every tool on the phone. headroid holds it
+  only while reading the screen and releases it after 1 s idle; when another tool (Appium, `uiautomator`, Maestro,
+  another session) holds it, a tree read waits up to 10 s, then fails with a message naming the cause.
 
 ## Other commands
 

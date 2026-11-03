@@ -4,6 +4,7 @@ package dev.headroid.server.session;
 
 import dev.headroid.server.apps.AppLauncher;
 import dev.headroid.server.apps.AppMuter;
+import dev.headroid.server.apps.AppPresence;
 import dev.headroid.server.display.DisplayFlags;
 import dev.headroid.server.display.DisplayRegistry;
 import dev.headroid.server.display.HiddenDisplay;
@@ -43,6 +44,9 @@ public final class Session {
     private final Set<String> launchedPackages = Collections.synchronizedSet(new LinkedHashSet<>());
     private final UiAutomationHost uiAutomation = new UiAutomationHost();
     private final AppMuter muter = AppMuter.recover();
+    // every display this session created, released or not: their activities are destroyed asynchronously after a release
+    private final Set<Integer> ownedDisplayIds = Collections.synchronizedSet(new LinkedHashSet<>());
+    private final Map<String, Boolean> runningBeforeLaunch = Collections.synchronizedMap(new LinkedHashMap<>());
     private volatile boolean shutdownRequested;
 
     public boolean isShutdownRequested() {
@@ -59,6 +63,7 @@ public final class Session {
         d.register("display.create", p -> {
             HiddenDisplay display = HiddenDisplay.create(p.optInt("width", 720), p.optInt("height", 1600), p.optInt("dpi", 320));
             displays.add(display);
+            ownedDisplayIds.add(display.id());
             Map<String, Object> result = describe(display);
             result.put("flags", DisplayFlags.describe(display.flags()));
             return result;
@@ -85,20 +90,36 @@ public final class Session {
         d.register("app.launch", p -> {
             int displayId = displays.require(p.getInt("displayId")).id();
             String pkg = p.getString("package");
+            // remembered at the first launch: a process that already exists belongs to the owner or another session
+            runningBeforeLaunch.putIfAbsent(pkg, AppPresence.isRunning(pkg));
+            boolean forceStop = p.optBool("forceStop", false);
+            if (forceStop) {
+                String why = whyNotStop(pkg);
+                if (why != null) {
+                    throw new RpcException(RpcException.INVALID_PARAMS, "forceStop: not stopping " + pkg + ": " + why);
+                }
+            }
             if (p.optBool("mute", true)) {
                 // before the launch, so even the first sound is silenced
                 muter.mute(pkg, p.optBool("muteNotifications", false));
             }
-            AppLauncher.launch(displayId, pkg, p.optString("activity", null), p.optBool("forceStop", false));
+            AppLauncher.launch(displayId, pkg, p.optString("activity", null), forceStop);
             launchedPackages.add(pkg);
             return null;
         });
         d.register("app.stop", p -> {
             String pkg = p.getString("package");
-            AppLauncher.stop(pkg);
-            launchedPackages.remove(pkg);
-            muter.restore(pkg);
-            return null;
+            String why = whyNotStop(pkg);
+            Map<String, Object> result = new LinkedHashMap<>();
+            result.put("stopped", why == null);
+            if (why == null) {
+                AppLauncher.stop(pkg);
+                launchedPackages.remove(pkg);
+                muter.restore(pkg);
+            } else {
+                result.put("reason", why);
+            }
+            return result;
         });
 
         d.register("input.tap", p -> {
@@ -123,7 +144,10 @@ public final class Session {
             String text = p.getString("text");
             String method = "keys";
             if (!new InputInjector(displayId).typeWithKeys(text)) {
-                uiAutomation.appendToFocused(displayId, text);
+                uiAutomation.lease(() -> {
+                    uiAutomation.appendToFocused(displayId, text);
+                    return null;
+                });
                 method = "setText";
             }
             return Collections.singletonMap("method", method);
@@ -133,7 +157,8 @@ public final class Session {
             int displayId = displays.require(p.getInt("displayId")).id();
             Map<String, Object> result = new LinkedHashMap<>();
             result.put("displayId", displayId);
-            result.put("nodes", TreeBuilder.build(uiAutomation.windowRootViews(displayId), TREE_MAX_DEPTH));
+            // the nodes read their children through the connection, so build the whole tree inside the lease
+            result.put("nodes", uiAutomation.lease(() -> TreeBuilder.build(uiAutomation.windowRootViews(displayId), TREE_MAX_DEPTH)));
             return result;
         });
     }
@@ -183,8 +208,9 @@ public final class Session {
     }
 
     /**
-     * Teardown order: stop the apps launched on hidden displays, then release the displays (their remaining content is
-     * destroyed, never moved to display 0), then give up the UiAutomation connection, then unmute the apps.
+     * Teardown order: release the displays (their content is destroyed, never moved to display 0), then force-stop the
+     * launched apps that headroid started and nobody else has open, then give up the UiAutomation connection, then
+     * unmute the apps.
      */
     public void teardown() {
         Ln.i("Teardown");
@@ -193,15 +219,37 @@ public final class Session {
             packages = new ArrayList<>(launchedPackages);
             launchedPackages.clear();
         }
+        // releasing a display destroys the activities on it, without killing the app's process
+        displays.releaseAll();
         for (String pkg : packages) {
             try {
-                AppLauncher.stop(pkg);
+                String why = whyNotStop(pkg);
+                if (why == null) {
+                    AppLauncher.stop(pkg);
+                } else {
+                    Ln.i("Not stopping " + pkg + ": " + why);
+                }
             } catch (RuntimeException e) {
                 Ln.e("Could not stop " + pkg, e);
             }
         }
-        displays.releaseAll();
+        runningBeforeLaunch.clear();
         uiAutomation.disconnect();
         muter.restoreAll();
+    }
+
+    /** Null when {@code pkg} may be force-stopped without hurting the owner or another session, else why not. */
+    private String whyNotStop(String pkg) {
+        Set<Integer> present;
+        try {
+            present = AppPresence.displaysWithActivities(pkg);
+        } catch (java.io.IOException e) {
+            return "could not check where it runs: " + e.getMessage();
+        }
+        List<Integer> own;
+        synchronized (ownedDisplayIds) {
+            own = new ArrayList<>(ownedDisplayIds);
+        }
+        return AppPresence.whyNotStop(runningBeforeLaunch.getOrDefault(pkg, AppPresence.isRunning(pkg)), present, own);
     }
 }

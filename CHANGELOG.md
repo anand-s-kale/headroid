@@ -19,5 +19,9 @@ All notable changes are recorded here. Format: [Keep a Changelog](https://keepac
 - The wheel bundles the server jar; a `release` workflow builds it and attaches it to `v*` releases.
 - Several sessions can share a phone: unique server socket, content-named jar on the device, per-server mute records.
 ### Fixed
+- Teardown force-stopped the app under test everywhere, killing the owner's copy and other sessions' copies; it
+  now stops only apps headroid started that nobody else has open.
+- UiAutomation was held for the whole session, blocking other sessions and tools (Appium, uiautomator); it is now
+  held only while reading the screen.
 - Taps on nodes read mid-transition landed off-display; off-display points are now rejected with a clear error.
 - The server stayed alive after the grace-period teardown; it now exits.
