@@ -20,6 +20,8 @@ headroid = "headroid.cli:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/headroid"]
+# The jar is gitignored; scripts/build_wheel.py copies it here before building.
+artifacts = ["src/headroid/_server/headroid-server.jar"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

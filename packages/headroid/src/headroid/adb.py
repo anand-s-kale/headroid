@@ -12,6 +12,27 @@ class AdbError(RuntimeError):
     """adb failed or was used ambiguously."""
 
 
+def list_devices(adb_path: str = "adb") -> list[dict]:
+    """Returns [{"serial", "state", "model"}] from `adb devices -l`."""
+    try:
+        proc = subprocess.run(
+            [adb_path, "devices", "-l"], capture_output=True, text=True, timeout=30, check=False
+        )
+    except FileNotFoundError as e:
+        raise AdbError(f"adb not found: {adb_path}") from e
+    except subprocess.TimeoutExpired as e:
+        raise AdbError("adb devices timed out") from e
+    devices = []
+    for ln in (proc.stdout or "").splitlines()[1:]:
+        parts = ln.split()
+        if len(parts) < 2:
+            continue
+        m = re.search(r"\bmodel:(\S+)", ln)
+        model = m.group(1).replace("_", " ") if m else ""
+        devices.append({"serial": parts[0], "state": parts[1], "model": model})
+    return devices
+
+
 class Adb:
     def __init__(self, serial: str | None = None, adb_path: str = "adb"):
         self.serial = serial
