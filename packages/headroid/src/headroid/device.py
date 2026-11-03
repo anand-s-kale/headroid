@@ -6,18 +6,29 @@ from __future__ import annotations
 
 import base64
 import os
+import time
+from collections.abc import Callable
 from typing import Self
 
 from .adb import Adb
+from .jar import resolve_jar
 from .rpc import RpcClient, RpcError
 from .server import ServerProcess
 
 
 class Display:
-    def __init__(self, client: RpcClient, info: dict):
+    def __init__(
+        self,
+        client: RpcClient,
+        info: dict,
+        clock: Callable[[], float] = time.monotonic,
+        sleep: Callable[[float], None] = time.sleep,
+    ):
         self._c = client
         self.info = info
         self.id: int = info["displayId"]
+        self._clock = clock
+        self._sleep = sleep
 
     def launch(self, package: str, activity: str | None = None) -> None:
         self._c.call("app.launch", displayId=self.id, package=package, activity=activity)
@@ -78,6 +89,61 @@ class Display:
 
         return walk(self.tree())
 
+    def _on_screen(self, node: dict) -> bool:
+        left, top, right, bottom = node["bounds"]
+        width, height = self.info["width"], self.info["height"]
+        return 0 <= left < right <= width and 0 <= top < bottom <= height
+
+    def wait_for(
+        self,
+        text: str | None = None,
+        rid: str | None = None,
+        desc: str | None = None,
+        timeout: float = 10.0,
+    ) -> dict:
+        """Waits until the node is visible, fully on the display and at the same bounds on two reads.
+
+        During an activity transition the tree reports the incoming window's nodes at their animated
+        position (shifted by a display width for ~0.8 s), so acting on the first sighting misses.
+        """
+        deadline = self._clock() + timeout
+        last = None
+        while self._clock() < deadline:
+            node = self.find(text=text, rid=rid, desc=desc)
+            if node is not None and node.get("visible", True) and self._on_screen(node):
+                if last is not None and node["bounds"] == last:
+                    return node
+                last = node["bounds"]
+            else:
+                last = None
+            self._sleep(0.2)
+        criteria = {k: v for k, v in (("text", text), ("rid", rid), ("desc", desc)) if v is not None}
+        raise TimeoutError(f"not found on screen and settled within {timeout}s: {criteria}")
+
+    def click(
+        self,
+        text: str | None = None,
+        rid: str | None = None,
+        desc: str | None = None,
+        timeout: float = 10.0,
+    ) -> dict:
+        node = self.wait_for(text=text, rid=rid, desc=desc, timeout=timeout)
+        left, top, right, bottom = node["bounds"]
+        self.tap((left + right) // 2, (top + bottom) // 2)
+        return node
+
+    def fill(
+        self,
+        value: str,
+        text: str | None = None,
+        rid: str | None = None,
+        desc: str | None = None,
+        timeout: float = 10.0,
+    ) -> dict:
+        node = self.click(text=text, rid=rid, desc=desc, timeout=timeout)
+        self.type(value)
+        return node
+
     def release(self) -> None:
         self._c.call("display.release", displayId=self.id)
 
@@ -90,9 +156,7 @@ class Device:
 
     @classmethod
     def connect(cls, serial: str | None = None, jar: str | None = None) -> Self:
-        jar = jar or os.environ.get("HEADROID_SERVER_JAR")
-        if not jar:
-            raise ValueError("server jar not given: pass jar= or set HEADROID_SERVER_JAR")
+        jar = resolve_jar(jar)
         adb = Adb(serial, os.environ.get("ADB", "adb"))
         server = ServerProcess(adb, jar)
         return cls(server.start(), server)

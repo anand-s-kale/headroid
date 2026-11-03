@@ -27,43 +27,6 @@ from headroid.adb import Adb
 PKG = "dev.headroid.sample"
 
 
-def on_screen(display, node) -> bool:
-    left, top, right, bottom = node["bounds"]
-    width, height = display.info["width"], display.info["height"]
-    return 0 <= left < right <= width and 0 <= top < bottom <= height
-
-
-def wait_for(display, timeout=20.0, **criteria):
-    """Waits until the node is visible, on screen and at the same bounds on two reads in a row.
-
-    During an activity transition the tree reports the incoming window's nodes at their animated position
-    (seen on a POCO F6: shifted right by the display width for ~0.8 s), so a tap on the first sighting misses.
-    """
-    deadline = time.monotonic() + timeout
-    last = None
-    while time.monotonic() < deadline:
-        node = display.find(**criteria)
-        if node is not None and node.get("visible", True) and on_screen(display, node):
-            if last is not None and node["bounds"] == last:
-                return node
-            last = node["bounds"]
-        else:
-            last = None
-        time.sleep(0.2)
-    raise AssertionError(f"not found on screen and settled within {timeout}s: {criteria}")
-
-
-def center(node):
-    left, top, right, bottom = node["bounds"]
-    return (left + right) // 2, (top + bottom) // 2
-
-
-def tap_node(display, **criteria):
-    node = wait_for(display, **criteria)
-    display.tap(*center(node))
-    return node
-
-
 def top_focused_display(adb: Adb) -> int | None:
     out = adb.shell("dumpsys window | grep mTopFocusedDisplayId")
     m = re.search(r"mTopFocusedDisplayId=(-?\d+)", out)
@@ -99,26 +62,24 @@ def main() -> int:
         results["display"] = display.info
 
         display.launch(PKG)
-        wait_for(display, rid="nav_login")
+        display.wait_for(rid="nav_login", timeout=20)
         checks["launch_and_tree"] = True
         png = display.screenshot(os.path.join(args.out, "01-home.png"))
         checks["screenshot_png"] = png[:8] == b"\x89PNG\r\n\x1a\n"
 
         focus_before = top_focused_display(adb)
-        tap_node(display, rid="nav_login")
-        tap_node(display, rid="login_email")
-        display.type("demo@headroid.dev")
-        tap_node(display, rid="login_password")
-        display.type("headroid")
+        display.click(rid="nav_login", timeout=20)
+        display.fill("demo@headroid.dev", rid="login_email", timeout=20)
+        display.fill("headroid", rid="login_password", timeout=20)
         display.screenshot(os.path.join(args.out, "02-login.png"))
-        tap_node(display, rid="login_submit")
-        wait_for(display, rid="form_name")
+        display.click(rid="login_submit", timeout=20)
+        display.wait_for(rid="form_name", timeout=20)
         checks["login_flow"] = True
 
-        tap_node(display, rid="form_name")
+        display.click(rid="form_name", timeout=20)
         method = display._c.call("input.text", displayId=display.id, text="héllo \U0001f600")["method"]
         results["unicode_text_method"] = method
-        field = wait_for(display, rid="form_name")
+        field = display.wait_for(rid="form_name", timeout=20)
         checks["unicode_text"] = field.get("text") == "héllo \U0001f600"
         display.screenshot(os.path.join(args.out, "03-form.png"))
 

@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+import secrets
 import subprocess
 import time
 
@@ -15,10 +16,10 @@ MAIN_CLASS = "dev.headroid.server.HeadroidServer"
 
 
 class ServerProcess:
-    def __init__(self, adb: Adb, jar_path: str, socket: str = "headroid"):
+    def __init__(self, adb: Adb, jar_path: str, socket: str | None = None):
         self.adb = adb
         self.jar_path = jar_path
-        self.socket = socket
+        self.socket = socket or f"headroid-{secrets.token_hex(4)}"
         self.proc = None
         self.port: int | None = None
         self.client: RpcClient | None = None
