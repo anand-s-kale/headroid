@@ -81,6 +81,11 @@ needs an explicit `packages:` list on current runners (its default `tools` packa
   `app.stop` returns `{stopped, reason}`. UiAutomation is leased per call (released after 1 s idle, waits up to 10 s
   when busy). Verified: two sessions on one app, `uiautomator dump` alongside, smoke 8/8, no process left.
   Follow-up: one shared server per phone multiplexing sessions would remove the UiAutomation contention entirely.
+- Wi-Fi resilience (found by the second 60-min run: adb transport dropped at minute ~17, server died with it):
+  server started with `setsid ... &` and stdio closed, `grace_ms=60000`; host `ReconnectingClient` reconnects (new
+  forward, `Adb.relocate` by `ro.serialno`) and resends only read calls. Verified with `adb reconnect` mid-session:
+  back in 6 s, timer continued, tap worked; orphan server tore down 60 s after losing its host.
+- PyPI: prepared (0.1.0a1, trusted publishing, docs/RELEASING.md); waiting on the owner's pypi.org setup.
 - Not done: PyPI publish (owner decision), focus check / leak watch part of Task 1.8, governor (1.9), video (1.10),
   smoothness measurement with the owner (step 6), screen-off long run (7b).
 

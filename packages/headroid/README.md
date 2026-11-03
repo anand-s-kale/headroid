@@ -71,6 +71,9 @@ Lower-level calls (`tap`, `swipe`, `key`, `type`, `tree`, `find`) are also avail
   them by revoking the notification permission while the session runs; the app can see that and may ask for the
   permission again, so it is opt-in, and it is skipped when the app is already running.
 - Toasts, dialogs and permission prompts appear on the hidden display.
+- A Wi-Fi drop does not end the session: the server keeps it for 60 s, the host reconnects (finding the phone even
+  under a new adb serial) and resends reads; an action that was in flight raises `ConnectionError` saying it may or
+  may not have run. If no host returns within 60 s, the server tears everything down and exits.
 - Several sessions can share one phone: each gets its own server socket and its own mute records.
 - At the end, an app is force-stopped only if headroid started it and nobody else has it open. If it was already
   running (your copy on the phone, or another session's), only the hidden display is closed and the app keeps running.

@@ -17,6 +17,7 @@ class FakeServer:
         self.calls: list[tuple[str, dict]] = []
         self.tree = []
         self.no_frame = False
+        self.drop_next = False
         outer = self
 
         class Handler(socketserver.StreamRequestHandler):
@@ -25,6 +26,10 @@ class FakeServer:
                     req = json.loads(line)
                     outer.calls.append((req["method"], req.get("params", {})))
                     m = req["method"]
+                    if outer.drop_next:
+                        # simulate a dropped adb transport: close without answering
+                        outer.drop_next = False
+                        return
                     if m == "boom":
                         resp = {"error": {"code": -32010, "message": "no focused editable"}}
                     elif m == "ui.tree":

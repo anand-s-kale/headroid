@@ -55,6 +55,25 @@ class Adb:
         out = proc.stdout or ""
         return [ln.split()[0] for ln in out.splitlines()[1:] if re.search(r"\sdevice\b", ln)]
 
+    def relocate(self, hardware_serial: str) -> bool:
+        """Finds this phone again after a reconnect and switches to it.
+
+        A wireless phone can come back under another adb serial (its mDNS name or ip:port), so the attached
+        devices are matched on their hardware serial (ro.serialno). Returns False while it is not attached.
+        """
+        attached = self._devices()
+        if self.serial in attached:
+            return True
+        for serial in attached:
+            try:
+                found = Adb(serial, self.adb_path).shell("getprop ro.serialno").strip()
+            except AdbError:
+                continue
+            if found == hardware_serial:
+                self.serial = serial
+                return True
+        return False
+
     def _ensure_unambiguous(self) -> None:
         if self.serial or self._checked:
             return

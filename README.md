@@ -112,7 +112,8 @@ untested. Details per device: [capability matrix](docs/CAPABILITY-MATRIX.md).
 | Toasts, dialogs, permission prompts stay hidden | ✅ verified | |
 | Sound and vibration muted | ✅ verified | per app (app-ops), restored after the session, also after a crash |
 | Notifications | ⚠️ opt-in | reach the owner unless `mute_notifications=True` |
-| Clean teardown after host or server crash | ✅ verified | nothing left on the phone after ~15 s |
+| Wi-Fi drop during a session | ✅ verified | the server outlives the adb connection; the host reconnects (6 s in the test) and resends reads |
+| Clean teardown after host or server crash | ✅ verified | nothing left on the phone after the 60 s grace period |
 | Several sessions on one phone | ✅ verified | separate server, socket and mute records; one never kills an app another uses |
 | Your own copy of the app under test | ✅ verified | not force-stopped at the end when it was already running (only the hidden screen closes) |
 | Appium / `uiautomator` / Maestro alongside | ⚠️ | they share one UiAutomation with headroid: it is held only while reading the screen and waited for up to 10 s |
