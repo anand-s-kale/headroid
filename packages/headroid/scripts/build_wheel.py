@@ -40,6 +40,9 @@ def main(argv: list[str] | None = None) -> int:
     DEST.parent.mkdir(parents=True, exist_ok=True)
     shutil.copyfile(jar, DEST)
     print(f"copied {jar} -> {DEST}")
+    # the jar is derived from scrcpy-server (Apache-2.0): ship the licence and attributions with it
+    for name in ("LICENSE", "NOTICE"):
+        shutil.copyfile(REPO / name, DEST.parent / name)
     proc = subprocess.run(
         [sys.executable, "-m", "build", "--wheel", "--outdir", args.outdir],
         cwd=PKG_DIR,

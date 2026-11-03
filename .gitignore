@@ -20,4 +20,6 @@ headroid-report/
 *.mp4
 # jar bundled into the Python wheel (copied by packages/headroid/scripts/build_wheel.py)
 packages/headroid/src/headroid/_server/headroid-server.jar
+packages/headroid/src/headroid/_server/LICENSE
+packages/headroid/src/headroid/_server/NOTICE
 .env

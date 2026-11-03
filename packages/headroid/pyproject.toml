@@ -4,13 +4,31 @@ build-backend = "hatchling.build"
 
 [project]
 name = "headroid"
-version = "0.1.0"
-description = "Run Android apps on hidden virtual displays and drive them from Python."
+version = "0.1.0a1"
+description = "Test Android apps on a hidden display of your own phone while you keep using it."
 readme = "README.md"
 requires-python = ">=3.11"
 license = "Apache-2.0"
 authors = [{ name = "Anand S Kale and the headroid contributors" }]
+keywords = ["android", "testing", "automation", "adb", "virtual-display", "headless", "ui-testing", "ai-agents"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Testing",
+    "Topic :: Software Development :: Testing :: Acceptance",
+]
 dependencies = []
+
+[project.urls]
+Homepage = "https://github.com/anand-s-kale/headroid"
+Documentation = "https://github.com/anand-s-kale/headroid/tree/main/packages/headroid#readme"
+Issues = "https://github.com/anand-s-kale/headroid/issues"
+Changelog = "https://github.com/anand-s-kale/headroid/blob/main/CHANGELOG.md"
 
 [project.optional-dependencies]
 dev = ["pytest>=8", "ruff"]
@@ -20,8 +38,12 @@ headroid = "headroid.cli:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/headroid"]
-# The jar is gitignored; scripts/build_wheel.py copies it here before building.
-artifacts = ["src/headroid/_server/headroid-server.jar"]
+# Gitignored; scripts/build_wheel.py copies the jar, and the repo's LICENSE and NOTICE that cover it, here first.
+artifacts = [
+    "src/headroid/_server/headroid-server.jar",
+    "src/headroid/_server/LICENSE",
+    "src/headroid/_server/NOTICE",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
