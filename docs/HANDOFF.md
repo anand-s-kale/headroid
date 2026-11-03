@@ -85,8 +85,13 @@ needs an explicit `packages:` list on current runners (its default `tools` packa
   server started with `setsid ... &` and stdio closed, `grace_ms=60000`; host `ReconnectingClient` reconnects (new
   forward, `Adb.relocate` by `ro.serialno`) and resends only read calls. Verified with `adb reconnect` mid-session:
   back in 6 s, timer continued, tap worked; orphan server tore down 60 s after losing its host.
-- PyPI: prepared (0.1.0a1, trusted publishing, docs/RELEASING.md); waiting on the owner's pypi.org setup.
-- Not done: PyPI publish (owner decision), focus check / leak watch part of Task 1.8, governor (1.9), video (1.10),
+- PyPI: **0.1.0a1 published 2026-11-03** (https://pypi.org/project/headroid/) via trusted publishing; GitHub
+  pre-release v0.1.0a1 has the wheel, jar and sample APK. Verified `pip install --pre headroid` in a clean venv: doctor
+  all PASS and launch worked on the POCO F6. The `pypi` GitHub environment was auto-created without a reviewer.
+- Open: in the third 60-min run the sample app on the hidden display ended between minute 12 and 13 with no kill
+  line in the log (headroid's guard was not involved: the next process was started by another session). Possibly
+  HyperOS power management; the fourth run logs the app pid and uid state every minute.
+- Not done: focus check / leak watch part of Task 1.8, governor (1.9), video (1.10),
   smoothness measurement with the owner (step 6), screen-off long run (7b).
 
 ## On-device checklist for the next session with the owner
