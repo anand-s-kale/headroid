@@ -165,6 +165,19 @@ never capture display 0, and keep screenshots of the hidden display only.
      fails, the trap script (scratchpad `why6.py`: one read per minute, on first failure saves screenshot, tree,
      window/activity/power/display/SurfaceFlinger/accessibility dumps, logcat, app ticks and a `debuggerd -j`
      stack) will show where the app's UI thread is stuck. A power keep-awake ticker is **not** needed.
+   - **Root cause found (2026-11-04): HyperOS `GreezeManager` freezes the app under test on screen off.**
+     Reproduced 3/3 right after toggling Wireless debugging, then 1/1 more: within 15–40 s of `KEYCODE_SLEEP` the
+     sample's own 10 s log ticks stop, frames stop, and the tree has no windows (each read ~5 s = accessibility
+     timeout). Logcat: `GreezeManager: FZ uid = 10814 reason =screen off success !`. Android's own freezer says
+     `isFrozen=false` and the activity stays RESUMED, process state TOP, which is why the earlier checks looked
+     healthy. HyperOS treats an app visible only on a virtual display as background. The runs that passed
+     (09:52–10:43) followed the owner opening the sample on display 0 at 09:46, which apparently made Greeze treat it
+     as a recently used app. Tried: `dumpsys deviceidle whitelist +pkg` does **not** stop it. Greeze
+     (`service greezer`, `miui.greeze.IGreezeManager`) thaws on network packets, broadcasts to receivers, signals,
+     binder calls, provider/service starts and activity launches, refreezing after `fz_timeout=5000`; its
+     `persist.sys.gz.monkey` switch is not settable from shell. Next: check whether the owner-set battery mode
+     "No restrictions" for the app exempts it; otherwise detect it (app pid in `dumpsys greezer` "Frozen
+     processes") and fail with a clear error, or thaw on demand before each action.
    - **Leftover-process theory — disproved** (2026-11-04): a fresh locked session on a sample process left by a
      killed session passed 2 min. While testing it, found a real isolation bug instead: every session left the
      app's task in the owner's **Recents** (13 entries on the POCO F6; the server destroys the activities on
