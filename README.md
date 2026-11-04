@@ -37,7 +37,7 @@ options; `headroid doctor` tells you which.
 
 ## Write tests
 
-Unreleased (in `main`, not yet on PyPI). Installing headroid adds a pytest plugin (pytest 7 or later) with
+New in 0.1.0a5. Installing headroid adds a pytest plugin (pytest 7 or later) with
 `headroid_device` and `headroid_page` fixtures; `headroid_page` opens a hidden display with the app and closes it
 after the test.
 

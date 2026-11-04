@@ -68,7 +68,7 @@ open on your screen.
 
 ## 5. Write tests with pytest
 
-Unreleased (in `main`, not yet on PyPI). A Playwright-style layer on top of `Display`:
+New in 0.1.0a5. A Playwright-style layer on top of `Display`:
 
 ```python
 import pytest
