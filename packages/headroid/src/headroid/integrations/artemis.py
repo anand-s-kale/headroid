@@ -144,6 +144,11 @@ def tree_to_elements(nodes: list[dict]) -> list[dict]:
     return elements
 
 
+def _root_bounds(nodes: list[dict]) -> list[list[int]]:
+    """Bounds of the visible top-level nodes (window roots) with a non-empty box."""
+    return _visible_bounds([{**n, "children": []} for n in nodes])
+
+
 def _visible_bounds(nodes: list[dict]) -> list[list[int]]:
     """Bounds of every visible node with a non-empty box, in document order."""
     boxes: list[list[int]] = []
@@ -404,7 +409,8 @@ class HeadroidDriver(BaseDeviceDriver):
         by another tool) are raised with their message. An empty display gives a black placeholder image.
 
         Unless skip_settling, the tree is re-read until it has settled (see _settled_tree), so the elements
-        are not caught mid-transition; the screenshot is taken after that."""
+        are not caught mid-transition; the screenshot is taken after that. The cost is at least two tree reads and
+        one 0.15 s pause per settled observation (up to 2.0 s while a transition runs); skip_settling avoids it."""
         width, height = self.screen_size
         if skip_settling:
             nodes = await self._call("tree")
@@ -427,8 +433,10 @@ class HeadroidDriver(BaseDeviceDriver):
         )
 
     def _settled_tree(self, width: int, height: int) -> list[dict]:
-        """Reads the tree until every visible node is on the display and two consecutive reads have the
-        same bounds, or SETTLE_DEADLINE_SECONDS pass (then the latest read is returned; never raises).
+        """Reads the tree until every window root is on the display and two consecutive reads have the same
+        bounds on all visible nodes, or SETTLE_DEADLINE_SECONDS pass (then the latest read is returned; never
+        raises). Only the roots (top-level entries) must be on screen: a transition shifts the whole incoming
+        window, while descendants may legitimately overflow (carousels, ViewPager neighbours).
 
         Right after a tap opens a new activity the incoming window's nodes are reported at their animated
         position, shifted by a display width for ~0.8 s (the case Display.wait_for handles)."""
@@ -441,7 +449,7 @@ class HeadroidDriver(BaseDeviceDriver):
             if (
                 previous is not None
                 and boxes == previous
-                and all(bounds_on_screen(b, width, height) for b in boxes)
+                and all(bounds_on_screen(b, width, height) for b in _root_bounds(nodes))
             ):
                 return nodes
             if self._clock() >= deadline:

@@ -333,6 +333,32 @@ def test_get_screen_data_waits_for_the_tree_to_settle_then_screenshots():
     assert driver.fake_time.sleeps == [0.15, 0.15]
 
 
+def test_overflowing_descendant_does_not_block_settling():
+    import copy
+
+    tree = copy.deepcopy(TREE)
+    tree[0]["children"].append(
+        {
+            "id": "0.1",
+            "cls": "android.widget.ViewPager",
+            "pkg": "dev.headroid.sample",
+            "text": "Page 2",
+            "desc": "",
+            "rid": "",
+            "bounds": [720, 200, 1440, 400],
+            "clickable": False,
+            "visible": True,
+            "children": [],
+        }
+    )
+    driver, _, display = _driver()
+    display.tree_result = tree
+    data = run(driver.get_screen_data())
+    assert [c[0] for c in display.calls] == ["tree", "tree", "screenshot"]
+    assert driver.fake_time.sleeps == [0.15]
+    assert any(e["text"] == "Page 2" for e in data.ui_elements)
+
+
 def test_get_screen_data_returns_latest_read_after_deadline_without_raising():
     driver, _, display = _driver()
     # never the same twice, never fully on screen
@@ -411,7 +437,17 @@ def test_swipe_direction_uses_hidden_display_size():
 def test_press_key_accepts_names_and_numbers():
     driver, device, _ = _driver()
     # "back", "enter", "delete" and "123" (MOVE_END) are the keys ARTEMIS itself sends.
-    for key in ("enter", "back", "delete", "KEYCODE_DEL", "123", 61, KeyCode.DELETE, "dpad_down", "menu"):
+    for key in (
+        "enter",
+        "back",
+        "delete",
+        "KEYCODE_DEL",
+        "123",
+        61,
+        KeyCode.DELETE,
+        "dpad_down",
+        "menu",
+    ):
         run(driver.press_key(key))
     assert device.calls == [
         ("key", 66),
