@@ -3,6 +3,8 @@
 All notable changes are recorded here. Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
+
+## [0.1.0a2] - 2026-11-04
 ### Fixed
 - Every session left a task of the app under test in the owner's Recents; opening it started that app on the
   owner's screen. Apps are now launched with `FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS`.
