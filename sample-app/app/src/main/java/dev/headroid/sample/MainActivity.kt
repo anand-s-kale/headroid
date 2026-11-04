@@ -20,6 +20,7 @@ class MainActivity : Activity() {
             Triple(R.id.nav_crash, "Crash", CrashActivity::class.java),
             Triple(R.id.nav_secure, "Secure", SecureActivity::class.java),
             Triple(R.id.nav_timer, "Timer", TimerActivity::class.java),
+            Triple(R.id.nav_single_task, "Single task", SingleTaskActivity::class.java),
         )
         page("headroid sample") {
             for ((id, name, cls) in screens) {

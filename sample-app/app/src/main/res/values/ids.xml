@@ -8,6 +8,9 @@
     <item name="nav_crash" type="id" />
     <item name="nav_secure" type="id" />
     <item name="nav_timer" type="id" />
+    <item name="nav_single_task" type="id" />
+    <item name="single_task_title" type="id" />
+    <item name="single_task_new_intents" type="id" />
     <item name="login_email" type="id" />
     <item name="login_password" type="id" />
     <item name="login_submit" type="id" />
