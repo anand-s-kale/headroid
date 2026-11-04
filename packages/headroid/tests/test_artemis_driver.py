@@ -396,6 +396,13 @@ def test_get_current_package():
         "x=screencap; $x -p",
         "env -i PATH=/system/bin input tap 1 1",
         "timeout -s 9 5 uiautomator dump",
+        "am start --display 7 -n a/.B --display 0",
+        "am start --display 7 -n a/.B --display=0",
+        "am start --display=0 -n a/.B",
+        "am start -n a/.B --display",
+        "cmd activity start-activity --display 7 --display 0 -n a/.B",
+        "am start-in-vsync -n a/.B",
+        "echo hi | screencap -p",
     ],
 )
 def test_execute_shell_refuses_display_0(command):
@@ -415,6 +422,8 @@ def test_execute_shell_refuses_display_0(command):
         "cmd package list packages",
         "getprop ro.serialno 2>&1",
         "pm list packages | grep input",
+        "pm list packages | grep monkey",
+        "am start --display 7 -n a/.B --display=7",
     ],
 )
 def test_execute_shell_runs_other_commands(command):

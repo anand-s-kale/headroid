@@ -205,6 +205,22 @@ _UNCHECKABLE_PROGRAMS = {
 }
 # Refused wherever they appear in a command, not only as its program (they are not ordinary words).
 _REFUSED_ANYWHERE = {"screencap", "screenrecord", "uiautomator", "monkey", "sendevent", "getevent"}
+_TEXT_FILTERS = {
+    "grep",
+    "egrep",
+    "fgrep",
+    "echo",
+    "printf",
+    "sed",
+    "awk",
+    "cut",
+    "sort",
+    "uniq",
+    "head",
+    "tail",
+    "wc",
+    "tr",
+}
 _WRAPPERS = {
     "exec",
     "command",
@@ -325,7 +341,8 @@ def _segment_refusal(words: list[str], hidden_display_id: int) -> str | None:
     shown = " ".join(words)
     if "$" in program or set(program) & set("*?[{"):
         return f"`{shown}` {_UNCHECKABLE}"
-    for word in words:
+    # a text filter's arguments are patterns, not commands ("pm list packages | grep monkey")
+    for word in words[:1] if program in _TEXT_FILTERS else words:
         name = posixpath.basename(word)
         if name in _REFUSED_ANYWHERE:
             return f"refused `{shown}`: `{name}` {_REFUSED_PROGRAMS[name]}{_DISPLAY_0_TAIL}"
@@ -354,11 +371,16 @@ def _segment_refusal(words: list[str], hidden_display_id: int) -> str | None:
 
 def _am_refusal(args: list[str], shown: str, hidden_display_id: int) -> str | None:
     sub = args[0] if args else ""
-    if sub in ("start", "start-activity"):
-        if "--display" in args:
-            i = args.index("--display")
-            if i + 1 < len(args) and args[i + 1] == str(hidden_display_id):
-                return None
+    if sub in ("start", "start-activity", "start-in-vsync"):
+        # am takes the last --display; require every one (and any "--display=N" spelling) to be ours
+        displays = []
+        for i, arg in enumerate(args):
+            if arg == "--display":
+                displays.append(args[i + 1] if i + 1 < len(args) else "")
+            elif arg.startswith("--display"):
+                displays.append(arg.partition("=")[2] if arg.startswith("--display=") else "")
+        if displays and all(d == str(hidden_display_id) for d in displays):
+            return None
         return (
             f"refused `{shown}`: `am {sub}` must name this session's hidden display (--display "
             f"{hidden_display_id}); without it Android starts the activity on display 0.{_DISPLAY_0_TAIL}"
