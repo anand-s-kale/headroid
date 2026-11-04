@@ -231,6 +231,23 @@ readable in the element list (accessibility exposes it). The two rough edges (1)
   not covered by the chooser check; check singleTask
   activities do not reuse a task on display 0; exercise `input.clearText` on a device.
 
+## Follow-up session 2026-11-04: open_url, launch guard, Page/Locator/expect, pytest plugin (branch `claude/next`)
+On the POCO F6 (Wi-Fi adb), all with focus on display 0 throughout:
+- `Page`/`Locator`/`expect` via the pytest plugin (`headroid_page`): sample login, then `fill` replaces a field's text
+  ("first value" -> "second", so `input.clearText` works on a real field). Found and fixed: Android reports button
+  text in capitals ("LOGIN"), so `get_by_text` now defaults to a case-insensitive substring like Playwright.
+- `Display.open_url("https://example.com")` opened on the hidden display; `tel:`, `file:`, `intent:` and a URL
+  without a scheme were refused.
+- singleTask: with the sample's `SingleTaskActivity` open on display 0 (owner-approved), a hidden-display launch of
+  it was refused ("open on display [0] and its activity is singleTask/singleInstance"); the owner's task id was
+  unchanged and it received 0 new intents. With it closed, the same launch worked on the hidden display.
+- Agent end-to-end (`scripts/agent_e2e.py`) on the integrated build: 10/10, screen on.
+- Screen off (sample set to Battery saver "No restrictions"): agent e2e 10/10, but the phone was woken ~18 s into
+  the run by `cmd power` from the PC (shell uid, `details=PowerCommand`). Cause: about ten of the owner's own
+  ARTEMIS MCP servers (`~/artemis/.venv ... -m mcp_server`, started by MCP clients) run ARTEMIS's keep-awake
+  service against any attached phone. headroid mode has that service off. A clean screen-off agent run needs those
+  servers closed for the duration.
+
 ## Next work (in order)
 1. Run the checklist above with the owner; fix what fails.
 2. M1 remaining (plan Tasks 1.8–1.12): isolation guard (focus check, app-op muting with restore, display-0 leak
