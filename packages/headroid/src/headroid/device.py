@@ -11,6 +11,7 @@ from collections.abc import Callable
 from typing import TYPE_CHECKING, Self
 
 from .adb import Adb
+from .errors import TimeoutError
 from .jar import resolve_jar
 from .rpc import RpcClient, RpcError
 from .server import ServerProcess

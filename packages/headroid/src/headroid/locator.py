@@ -210,11 +210,11 @@ class Locator:
         self._page.display.tap((left + right) // 2, (top + bottom) // 2)
 
     def fill(self, value: str, timeout: float | None = None) -> None:
-        """Taps the field, empties it and types value."""
+        """Taps the field, empties it and types value, all within one timeout."""
         timeout = self._timeout(timeout)
         page = self._page
-        self.click(timeout)
         deadline = page._clock() + timeout
+        self.click(timeout)
         while True:  # the tap's focus can land a moment after the tap
             try:
                 page.display.clear_text()

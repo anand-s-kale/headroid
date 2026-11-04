@@ -37,8 +37,9 @@ options; `headroid doctor` tells you which.
 
 ## Write tests
 
-Unreleased (in `main`, not yet on PyPI). Installing headroid adds a pytest plugin with `device` and `page`
-fixtures; `page` opens a hidden display with the app and closes it after the test.
+Unreleased (in `main`, not yet on PyPI). Installing headroid adds a pytest plugin (pytest 7 or later) with
+`headroid_device` and `headroid_page` fixtures; `headroid_page` opens a hidden display with the app and closes it
+after the test.
 
 ```python
 # test_login.py    run: pytest  (add --headroid-serial S when several phones are attached)
@@ -46,17 +47,20 @@ import pytest
 from headroid import expect
 
 @pytest.mark.headroid(app="dev.headroid.sample")
-def test_login(page):
-    page.get_by_id("nav_login").click()                    # auto-waits until visible, on screen and settled
+def test_login(headroid_page):
+    page = headroid_page
+    page.get_by_id("nav_login").click()                      # auto-waits until visible, on screen and settled
     page.get_by_id("login_email").fill("demo@headroid.dev")  # clears, then types
     page.get_by_id("login_password").fill("headroid")
     page.get_by_text("Sign in").click()
-    expect(page.get_by_id("form_name")).to_be_visible()    # retries for up to 10 s
+    expect(page.get_by_id("form_name")).to_be_visible()      # retries for up to 10 s
 ```
 
-On failure the screenshot and UI tree are saved under `headroid-artifacts/<test id>/`. With no phone attached the
-tests are skipped. Details: [packages/headroid](packages/headroid/README.md#5-write-tests-with-pytest). Later: an
-async API, XPath / image / role / Flutter locators, parallel pages, an HTML report, video, crash and ANR detection.
+When a test body fails, the screenshot and UI tree are saved under `headroid-artifacts/<test id>/` in the rootdir.
+With no phone attached the tests are skipped; several phones without `--headroid-serial` is an error. Details,
+including a shorter `page` alias: [packages/headroid](packages/headroid/README.md#5-write-tests-with-pytest).
+Later: an async API, XPath / image / role / Flutter locators, parallel pages, an HTML report, video, crash and ANR
+detection.
 
 ## Use with an AI agent (recommended: `headroid[artemis]`)
 

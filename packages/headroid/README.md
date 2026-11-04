@@ -68,8 +68,9 @@ Unreleased (in `main`, not yet on PyPI). A Playwright-style layer on top of `Dis
 import pytest
 from headroid import expect
 
-@pytest.mark.headroid(app="dev.headroid.sample")
-def test_login(page):
+@pytest.mark.headroid(app="dev.headroid.sample")      # or @pytest.mark.headroid("dev.headroid.sample")
+def test_login(headroid_page):
+    page = headroid_page
     page.get_by_id("nav_login").click()
     page.get_by_id("login_email").fill("demo@headroid.dev")
     page.get_by_id("login_password").fill("headroid")
@@ -77,15 +78,31 @@ def test_login(page):
     expect(page.get_by_id("form_name")).to_be_visible()
 ```
 
-Run it with `pytest` (`--headroid-serial S` picks a phone; `--headroid-app PKG` sets the app for tests without the
-marker; the marker wins). The plugin is registered automatically when headroid is installed.
+Run it with `pytest` (7 or later; `pip install --pre "headroid[test]"` pulls it in). `--headroid-serial S` picks a
+phone; `--headroid-app PKG` sets the app for tests without the marker (the marker wins). The plugin is registered
+automatically when headroid is installed.
 
-- **Fixtures.** `device` (one per session, `Device.connect`) and `page` (one per test: `device.new_page(app)`,
-  closed after the test). With no phone attached, several attached and no `--headroid-serial`, or adb missing, tests
-  using them are skipped with the reason.
-- **Failure artifacts.** When a test using `page` fails, `screenshot.png` and `tree.json` are saved under
-  `headroid-artifacts/<test id>/` (next to the rootdir) and listed in the report (a "headroid artifacts" section and
-  `user_properties`, so they reach JUnit XML).
+The fixtures are prefixed so they do not clash with other plugins (pytest-playwright also has a `page`). For
+shorter names, alias them in your project's `conftest.py`:
+
+```python
+import pytest
+
+@pytest.fixture
+def page(headroid_page):
+    return headroid_page
+```
+
+- **Fixtures.** `headroid_device` (one per session, `Device.connect`) and `headroid_page` (one per test:
+  `headroid_device.new_page(app)`, closed after the test).
+- **No phone.** When adb is missing or no device is ready, tests using the fixtures are skipped with the reason (an
+  unauthorised or offline phone is named, with a reminder to accept the USB debugging prompt). Several ready devices
+  without `--headroid-serial`, or a `--headroid-serial` that is not attached, is a usage error: every such test
+  errors with the message.
+- **Failure artifacts.** Only when the test body fails (not setup or teardown), `screenshot.png` and `tree.json` are
+  saved under `headroid-artifacts/<test id>-<hash>/` in the rootdir. Their paths are listed in a "headroid
+  artifacts" report section and as test properties (`user_properties`, which `--junitxml` writes as `<property>`
+  elements). A problem saving them is reported as `headroid_artifacts_error` and never fails the run.
 - **Page** (`Device.new_page(app, width=720, height=1600, dpi=320, mute=True)`, also usable without pytest and as a
   context manager): `locator(text=, rid=, desc=, exact=True)`, `get_by_text(text, exact=True)` (`exact=False`
   matches a case-insensitive substring), `get_by_id(rid)` (full `pkg:id/name` or short `name`; a React Native

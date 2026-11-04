@@ -32,6 +32,8 @@ Changelog = "https://github.com/anand-s-kale/headroid/blob/main/CHANGELOG.md"
 
 [project.optional-dependencies]
 dev = ["pytest>=8", "ruff"]
+# The pytest plugin (entry point below) needs pytest 7 or later.
+test = ["pytest>=7"]
 artemis = ["headroid-artemis>=0.1.0a1,<0.2; python_version >= '3.12'"]
 
 [project.entry-points.pytest11]

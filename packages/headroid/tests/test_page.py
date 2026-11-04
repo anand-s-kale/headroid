@@ -90,6 +90,28 @@ def test_wait_for_idle_timeout():
         page.wait_for_idle(timeout=2)
 
 
+def test_display_wait_for_raises_headroid_timeout_error(fake_server):
+    from headroid.device import Display
+
+    t = [0.0]
+    d = Display(
+        RpcClient("127.0.0.1", fake_server.port),
+        {"displayId": 1, "width": 720, "height": 1600},
+        clock=lambda: t[0],
+        sleep=lambda s: t.__setitem__(0, t[0] + s),
+    )
+    with pytest.raises(TimeoutError, match="nope"):
+        d.wait_for(text="nope", timeout=0.5)
+
+
+def test_fill_stays_within_one_timeout():
+    field = node(rid="p:id/f", bounds=(0, 0, 100, 50))
+    page, d = page_with([field], unfocused_clears=1000)
+    with pytest.raises(RpcError):
+        page.get_by_id("f").fill("x", timeout=2)
+    assert d.clock.t <= 2.0 + 0.2 + 1e-9
+
+
 def test_close_without_device_releases_display():
     page, d = page_with()
     page.close()
