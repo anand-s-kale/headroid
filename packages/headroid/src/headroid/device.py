@@ -16,6 +16,12 @@ from .rpc import RpcClient, RpcError
 from .server import ServerProcess
 
 
+def bounds_on_screen(bounds: list[int], width: int, height: int) -> bool:
+    """True when a non-empty [left, top, right, bottom] box lies fully inside a width x height display."""
+    left, top, right, bottom = bounds
+    return 0 <= left < right <= width and 0 <= top < bottom <= height
+
+
 class Display:
     def __init__(
         self,
@@ -119,9 +125,7 @@ class Display:
         return walk(self.tree())
 
     def _on_screen(self, node: dict) -> bool:
-        left, top, right, bottom = node["bounds"]
-        width, height = self.info["width"], self.info["height"]
-        return 0 <= left < right <= width and 0 <= top < bottom <= height
+        return bounds_on_screen(node["bounds"], self.info["width"], self.info["height"])
 
     def wait_for(
         self,

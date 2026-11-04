@@ -68,6 +68,8 @@ The fork's other ARTEMIS tools are not exposed. Under headroid, `press_key` only
 APP_SWITCH, POWER, volume, call, media, camera and every other key are refused. `execute_shell` only allows
 `getprop`, `pm list packages`, `pm path` and `am start` on the hidden display. headroid mcp never changes the phone's
 settings and turns off ARTEMIS's keep-awake service, which would wake the phone's own screen.
+The agent sees the text of the fields in the app under test, password fields included, because Android's accessibility
+layer exposes it: do not test with real credentials.
 On Xiaomi/HyperOS set the app under test to Battery saver "No restrictions", or it freezes with the screen off
 (headroid then returns error `-32014` naming the fix).
 

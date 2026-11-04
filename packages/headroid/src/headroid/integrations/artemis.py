@@ -19,6 +19,7 @@ import logging
 import os
 import shlex
 import struct
+import time
 import zlib
 from collections.abc import Callable
 from enum import Enum
@@ -28,7 +29,7 @@ from typing import Any
 from artemis.drivers.base import BaseDeviceDriver, KeyCode, ScreenData, SwipeDirection
 
 from ..adb import Adb, AdbError
-from ..device import Device
+from ..device import Device, bounds_on_screen
 from ..rpc import RpcError
 
 logger = logging.getLogger(__name__)
@@ -36,6 +37,9 @@ logger = logging.getLogger(__name__)
 DISPLAY_WIDTH = 720
 DISPLAY_HEIGHT = 1600
 DISPLAY_DPI = 320
+
+SETTLE_POLL_SECONDS = 0.15  # between tree reads while a screen change finishes animating
+SETTLE_DEADLINE_SECONDS = 2.0  # after this the latest read is returned, settled or not
 
 NO_FRAME = -32011  # the display has not drawn anything yet (no app on it)
 
@@ -138,6 +142,27 @@ def tree_to_elements(nodes: list[dict]) -> list[dict]:
 
     walk(nodes)
     return elements
+
+
+def _visible_bounds(nodes: list[dict]) -> list[list[int]]:
+    """Bounds of every visible node with a non-empty box, in document order."""
+    boxes: list[list[int]] = []
+
+    def walk(items: list[dict]) -> None:
+        for node in items:
+            bounds = node.get("bounds")
+            if (
+                node.get("visible", True)
+                and isinstance(bounds, (list, tuple))
+                and len(bounds) == 4
+                and bounds[0] < bounds[2]
+                and bounds[1] < bounds[3]
+            ):
+                boxes.append([int(v) for v in bounds])
+            walk(node.get("children") or [])
+
+    walk(nodes)
+    return boxes
 
 
 # headroid tree flag -> uiautomator attribute
@@ -297,9 +322,18 @@ def _am_start_problem(args: list[str], hidden_display_id: int) -> str | None:
 class HeadroidDriver(BaseDeviceDriver):
     """BaseDeviceDriver on one headroid hidden display of the phone `device_id`."""
 
-    def __init__(self, device_id: str, *, connect: Callable[[str], Device] = Device.connect):
+    def __init__(
+        self,
+        device_id: str,
+        *,
+        connect: Callable[[str], Device] = Device.connect,
+        clock: Callable[[], float] = time.monotonic,
+        sleep: Callable[[float], None] = time.sleep,
+    ):
         self._device_id = device_id
         self._connect = connect
+        self._clock = clock
+        self._sleep = sleep
         self._device: Device | None = None
         self._display = None
         self._size: tuple[int, int] | None = None
@@ -367,9 +401,15 @@ class HeadroidDriver(BaseDeviceDriver):
 
     async def get_screen_data(self, skip_settling: bool = False) -> ScreenData:
         """Screenshot and elements of the hidden display. headroid's errors (a HyperOS freeze, UiAutomation held
-        by another tool) are raised with their message. An empty display gives a black placeholder image."""
+        by another tool) are raised with their message. An empty display gives a black placeholder image.
+
+        Unless skip_settling, the tree is re-read until it has settled (see _settled_tree), so the elements
+        are not caught mid-transition; the screenshot is taken after that."""
         width, height = self.screen_size
-        nodes = await self._call("tree")
+        if skip_settling:
+            nodes = await self._call("tree")
+        else:
+            nodes = await asyncio.to_thread(self._settled_tree, width, height)
         try:
             png = await self._call("screenshot")
         except RpcError as e:
@@ -385,6 +425,30 @@ class HeadroidDriver(BaseDeviceDriver):
             height=height,
             platform="android",
         )
+
+    def _settled_tree(self, width: int, height: int) -> list[dict]:
+        """Reads the tree until every visible node is on the display and two consecutive reads have the
+        same bounds, or SETTLE_DEADLINE_SECONDS pass (then the latest read is returned; never raises).
+
+        Right after a tap opens a new activity the incoming window's nodes are reported at their animated
+        position, shifted by a display width for ~0.8 s (the case Display.wait_for handles)."""
+        display = self._require_display()
+        deadline = self._clock() + SETTLE_DEADLINE_SECONDS
+        nodes = display.tree()
+        previous = None
+        while True:
+            boxes = _visible_bounds(nodes)
+            if (
+                previous is not None
+                and boxes == previous
+                and all(bounds_on_screen(b, width, height) for b in boxes)
+            ):
+                return nodes
+            if self._clock() >= deadline:
+                return nodes
+            previous = boxes
+            self._sleep(SETTLE_POLL_SECONDS)
+            nodes = display.tree()
 
     async def get_current_package(self) -> str | None:
         """Package of the top window on the hidden display (never display 0's), or None when it is empty."""

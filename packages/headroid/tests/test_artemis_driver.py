@@ -71,6 +71,7 @@ class FakeDisplay:
         self.id = 7
         self.info = {"displayId": 7, "width": 720, "height": 1600, "dpi": 320}
         self.tree_result = TREE
+        self.tree_sequence = []  # when set, successive tree() reads pop from here (the last one repeats)
         self.screenshot_result = PNG
         self.stop_result = {"stopped": True}
 
@@ -81,6 +82,9 @@ class FakeDisplay:
 
     def tree(self):
         self.calls.append(("tree",))
+        if self.tree_sequence:
+            seq = self.tree_sequence
+            return self._answer(seq.pop(0) if len(seq) > 1 else seq[0])
         return self._answer(self.tree_result)
 
     def screenshot(self):
@@ -132,6 +136,21 @@ class FakeDevice:
         self.calls.append(("close",))
 
 
+class FakeTime:
+    """Injected clock and sleep: sleeping advances the clock instantly."""
+
+    def __init__(self):
+        self.now = 0.0
+        self.sleeps = []
+
+    def clock(self):
+        return self.now
+
+    def sleep(self, seconds):
+        self.sleeps.append(seconds)
+        self.now += seconds
+
+
 def _driver():
     device = FakeDevice()
     connected = []
@@ -140,7 +159,11 @@ def _driver():
         connected.append(serial)
         return device
 
-    driver = HeadroidDriver(device_id="SERIAL1", connect=connect)
+    fake_time = FakeTime()
+    driver = HeadroidDriver(
+        device_id="SERIAL1", connect=connect, clock=fake_time.clock, sleep=fake_time.sleep
+    )
+    driver.fake_time = fake_time
     asyncio.run(driver.connect())
     assert connected == ["SERIAL1"]
     device.calls.clear()
@@ -283,6 +306,52 @@ def test_empty_display_observe():
     idat = data.screenshot_bytes.index(b"IDAT")
     length = int.from_bytes(data.screenshot_bytes[idat - 4 : idat], "big")
     assert len(zlib.decompress(data.screenshot_bytes[idat + 4 : idat + 4 + length])) == 1600 * 721
+
+
+def _shifted(tree, extra=0):
+    """The same tree with every box moved right by the display width, as mid-transition."""
+    import copy
+
+    shifted = copy.deepcopy(tree)
+
+    def walk(items):
+        for node in items:
+            left, top, right, bottom = node["bounds"]
+            node["bounds"] = [left + 720 + extra, top, right + 720 + extra, bottom]
+            walk(node["children"])
+
+    walk(shifted)
+    return shifted
+
+
+def test_get_screen_data_waits_for_the_tree_to_settle_then_screenshots():
+    driver, _, display = _driver()
+    display.tree_sequence = [_shifted(TREE), TREE, TREE]
+    data = run(driver.get_screen_data())
+    assert [c[0] for c in display.calls] == ["tree", "tree", "tree", "screenshot"]
+    assert data.ui_elements[0]["bounds"] == "[32,91][688,166]"
+    assert driver.fake_time.sleeps == [0.15, 0.15]
+
+
+def test_get_screen_data_returns_latest_read_after_deadline_without_raising():
+    driver, _, display = _driver()
+    # never the same twice, never fully on screen
+    display.tree_sequence = [_shifted(TREE, extra=i) for i in range(60)]
+    data = run(driver.get_screen_data())
+    reads = [c for c in display.calls if c[0] == "tree"]
+    assert 2 <= len(reads) <= 15  # bounded by the 2.0 s deadline at 0.15 s polls
+    assert driver.fake_time.now >= 2.0
+    assert data.ui_elements[0]["bounds"].startswith("[7")
+    assert display.calls[-1] == ("screenshot",)
+
+
+def test_get_screen_data_skip_settling_reads_the_tree_once():
+    driver, _, display = _driver()
+    display.tree_sequence = [_shifted(TREE), TREE]
+    data = run(driver.get_screen_data(skip_settling=True))
+    assert [c[0] for c in display.calls] == ["tree", "screenshot"]
+    assert driver.fake_time.sleeps == []
+    assert data.ui_elements[0]["bounds"] == "[752,91][1408,166]"
 
 
 def test_other_screenshot_errors_propagate():
