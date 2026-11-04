@@ -88,6 +88,8 @@ needs an explicit `packages:` list on current runners (its default `tools` packa
 - PyPI: **0.1.0a1 published 2026-11-03** (https://pypi.org/project/headroid/) via trusted publishing; GitHub
   pre-release v0.1.0a1 has the wheel, jar and sample APK. Verified `pip install --pre headroid` in a clean venv: doctor
   all PASS and launch worked on the POCO F6. The `pypi` GitHub environment was auto-created without a reviewer.
+  **0.1.0a2 published 2026-11-04** (Recents fix, UiAutomation idle 5 s); verified the same way from a clean venv:
+  doctor all PASS, launch OK, no sample entry in the visible Recents.
 - Open: in the third 60-min run the sample app on the hidden display ended between minute 12 and 13 with no kill
   line in the log (headroid's guard was not involved: the next process was started by another session). Possibly
   HyperOS power management; the fourth run logs the app pid and uid state every minute.
