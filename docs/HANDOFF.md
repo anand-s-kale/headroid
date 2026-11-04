@@ -163,6 +163,16 @@ never capture display 0, and keep screenshots of the hidden display only.
      fails, the trap script (scratchpad `why6.py`: one read per minute, on first failure saves screenshot, tree,
      window/activity/power/display/SurfaceFlinger/accessibility dumps, logcat, app ticks and a `debuggerd -j`
      stack) will show where the app's UI thread is stuck. A power keep-awake ticker is **not** needed.
+   - **Leftover-process theory — disproved** (2026-11-04): a fresh locked session on a sample process left by a
+     killed session passed 2 min. While testing it, found a real isolation bug instead: every session left the
+     app's task in the owner's **Recents** (13 entries on the POCO F6; the server destroys the activities on
+     release, the task record stays). At 09:46 one was opened from Recents and started `MainActivity` on display 0
+     (events log: `startExistingRecents`, then `wm_create_activity` on display 0). That explains the two failed
+     runs at 09:46–09:50 only partly; 7b's own task stayed on its hidden display all run (no moves or stops in the
+     events log), so 7b's failure is still unexplained. Fixed: launches add `FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS`
+     (verified: the new task is absent from "Visible recent tasks"; smoke 8/8). Old entries on the phone need the
+     owner to swipe them away; adb has no command to drop past Recents entries. The live task on display 0 was
+     removed with `am stack remove`.
      Test-harness note: on Windows, stopping a background bash task can leave its `python.exe` child running, which
      keeps the session alive on the phone; kill leftover host scripts by command line.
 

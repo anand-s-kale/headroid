@@ -17,6 +17,15 @@ import android.content.pm.PackageManager;
 /** Starts and stops apps on hidden displays. */
 public final class AppLauncher {
 
+    /**
+     * MULTIPLE_TASK: start a new task on the hidden display instead of pulling an existing task of this app (possibly
+     * the owner's, on display 0) over to it. EXCLUDE_FROM_RECENTS: keep the task out of the owner's Recents; a
+     * released display destroys the activities but leaves the task listed, and opening it from Recents starts the app
+     * under test on display 0.
+     */
+    static final int LAUNCH_FLAGS = Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_MULTIPLE_TASK
+            | Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS;
+
     private AppLauncher() {
         // not instantiable
     }
@@ -37,9 +46,7 @@ public final class AppLauncher {
                 throw new RpcException(RpcException.INVALID_PARAMS, "package: no launchable activity in " + packageName);
             }
         }
-        // MULTIPLE_TASK: start a new task on the hidden display instead of pulling an existing task of this app
-        // (possibly the owner's, on display 0) over to it
-        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_MULTIPLE_TASK);
+        intent.addFlags(LAUNCH_FLAGS);
 
         ActivityOptions options = ActivityOptions.makeBasic();
         options.setLaunchDisplayId(displayId);
