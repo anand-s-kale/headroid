@@ -27,7 +27,7 @@ from headroid.adb import Adb
 PKG = "dev.headroid.sample"
 EMAIL, PASSWORD = "demo@headroid.dev", "headroid"  # LoginActivity.kt's test credentials
 TOOLS = {"mobile_observe", "mobile_act", "mobile_session_end"}
-VIRTUAL_DISPLAY = "virtual:com.android.shell,2000,headroid"
+VIRTUAL_DISPLAY = "headroid"  # as in emulator_smoke.py; the exact unique id format varies
 SERVER_PROCESS = "dev.headroid.server"
 TEARDOWN_WAIT_S = 70  # the device server exits after a grace period once the display is released
 
@@ -82,68 +82,84 @@ async def run(args: argparse.Namespace, adb: Adb, results: dict, checks: dict) -
     focus: dict[str, int | None] = {}
     async with stdio_client(params) as (read, write), ClientSession(read, write) as session:
         await session.initialize()
-        names = {t.name for t in (await session.list_tools()).tools}
-        results["tools"] = sorted(names)
-        checks["tools_are_the_three"] = names == TOOLS
 
         async def observe() -> dict:
             return payload(await session.call_tool("mobile_observe", {}))
 
         async def act(action: str, **a) -> dict:
-            return payload(await session.call_tool("mobile_act", {"action": action, "args": a}))
+            res = payload(await session.call_tool("mobile_act", {"action": action, "args": a}))
+            if res.get("status") != "success":
+                raise RuntimeError(f"mobile_act {action} {a.get('target', '')} failed: {res}")
+            return res
 
         async def tap(label: str, view: dict) -> dict:
             idx = find_index(view.get("elements_text"), label)
             if idx is None:
-                raise RuntimeError(f"no '{label}' element in:\n{view.get('elements_text')}")
+                raise RuntimeError(f"no '{label}' element in: {view.get('elements_text')}")
             return await act("click", target=idx)
 
-        focus["before"] = top_focused_display(adb)
+        try:
+            names = {t.name for t in (await session.list_tools()).tools}
+            results["tools"] = sorted(names)
+            checks["tools_are_the_three"] = names == TOOLS
 
-        launch = await act("manage_app", action="launch", app_name=PKG)
-        results["launch"] = launch.get("message")
-        checks["launched"] = launch.get("status") == "success"
-        focus["after_launch"] = top_focused_display(adb)
+            focus["before"] = top_focused_display(adb)
 
-        home = await observe()
-        checks["home_observed"] = (
-            home.get("status") == "success" and find_index(home.get("elements_text"), "Login") is not None
-        )
-        await tap("Login", home)
+            launch = await act("manage_app", action="launch", app_name=PKG)
+            results["launch"] = launch.get("message")
+            checks["launched"] = True
+            focus["after_launch"] = top_focused_display(adb)
+            # Proves the display check below is not passing vacuously.
+            checks["hidden_display_seen_during_run"] = leftovers(adb)[0]
 
-        view = await observe()
-        for label, value in (("Email", EMAIL), ("Password", PASSWORD)):
-            idx = find_index(view.get("elements_text"), label)
-            if idx is None:
-                raise RuntimeError(f"no '{label}' field in:\n{view.get('elements_text')}")
-            await act("input_text", text=value, target=idx)
+            home = await observe()
+            checks["home_observed"] = (
+                home.get("status") == "success"
+                and find_index(home.get("elements_text"), "Login") is not None
+            )
+            await tap("Login", home)
+
             view = await observe()
-        await tap("Sign in", view)
-        focus["after_login"] = top_focused_display(adb)
+            for label, value in (("Email", EMAIL), ("Password", PASSWORD)):
+                idx = find_index(view.get("elements_text"), label)
+                if idx is None:
+                    raise RuntimeError(f"no '{label}' field in: {view.get('elements_text')}")
+                await act("input_text", text=value, target=idx)
+                view = await observe()
+            await tap("Sign in", view)
+            focus["after_login"] = top_focused_display(adb)
 
-        after = await observe()
-        results["post_login_elements"] = after.get("elements_text")
-        # FormActivity is where a successful login lands; the login screen has no Submit button.
-        checks["post_login_observed"] = find_index(after.get("elements_text"), "Submit") is not None
+            after = await observe()
+            results["post_login_elements"] = after.get("elements_text")
+            # FormActivity is where a successful login lands; the login screen has no Submit.
+            checks["post_login_observed"] = find_index(after.get("elements_text"), "Submit") is not None
+        except Exception as e:  # noqa: BLE001 - recorded; teardown below still has to run
+            results["error"] = f"{type(e).__name__}: {e}"
+        finally:
+            try:
+                end = payload(await session.call_tool("mobile_session_end", {}))
+                checks["session_ended"] = end.get("status") == "success"
+            except Exception as e:  # noqa: BLE001
+                checks["session_ended"] = False
+                results.setdefault("error", f"mobile_session_end: {type(e).__name__}: {e}")
+            focus["after_end"] = top_focused_display(adb)
 
-        end = payload(await session.call_tool("mobile_session_end", {}))
-        checks["session_ended"] = end.get("status") == "success"
-        focus["after_end"] = top_focused_display(adb)
-
-        deadline = time.monotonic() + TEARDOWN_WAIT_S
-        display_left, proc_left = leftovers(adb)
-        while (display_left or proc_left) and time.monotonic() < deadline:
-            await asyncio.sleep(3)
+            deadline = time.monotonic() + TEARDOWN_WAIT_S
             display_left, proc_left = leftovers(adb)
-        checks["no_headroid_display_left"] = not display_left
-        checks["no_server_process_left"] = not proc_left
-
-    results["top_focused_display"] = focus
-    checks["focus_stayed_on_display_0"] = len(focus) == 4 and all(v == 0 for v in focus.values())
+            while (display_left or proc_left) and time.monotonic() < deadline:
+                await asyncio.sleep(3)
+                display_left, proc_left = leftovers(adb)
+            checks["no_headroid_display_left"] = not display_left
+            checks["no_server_process_left"] = not proc_left
+            results["top_focused_display"] = focus
+            checks["focus_stayed_on_display_0"] = len(focus) == 4 and all(
+                v == 0 for v in focus.values()
+            )
 
 
 REQUIRED_CHECKS = {
-    "tools_are_the_three", "launched", "home_observed", "post_login_observed", "session_ended",
+    "tools_are_the_three", "launched", "hidden_display_seen_during_run", "home_observed",
+    "post_login_observed", "session_ended",
     "no_headroid_display_left", "no_server_process_left", "focus_stayed_on_display_0",
 }
 
@@ -167,7 +183,7 @@ def main(argv: list[str] | None = None) -> int:
     try:
         asyncio.run(run(args, adb, results, checks))
     except Exception as e:  # noqa: BLE001 - report it with whatever was checked so far
-        results["error"] = f"{type(e).__name__}: {e}"
+        results.setdefault("error", f"{type(e).__name__}: {e}")
 
     print(json.dumps(results, indent=2, ensure_ascii=False))
     with open(os.path.join(args.out, "results.json"), "w", encoding="utf-8") as f:
