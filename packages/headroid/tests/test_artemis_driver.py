@@ -378,7 +378,7 @@ def test_get_current_package():
         "toybox screencap",
         "sh -c 'screencap -p'",
         "echo $(screencap -p)",
-        "am start --display 0 -n a/.B",
+        "am start --display 0 -n a/.B -f 0x18800000",
         "am start-activity -n a/.B",
         "cmd activity start -n a/.B",
         "cmd input tap 1 1",
@@ -397,9 +397,9 @@ def test_get_current_package():
         "x=screencap; $x -p",
         "env -i PATH=/system/bin input tap 1 1",
         "timeout -s 9 5 uiautomator dump",
-        "am start --display 7 -n a/.B --display 0",
-        "am start --display 7 -n a/.B --display=0",
-        "am start --display=0 -n a/.B",
+        "am start --display 7 -n a/.B --display 0 -f 0x18800000",
+        "am start --display 7 -n a/.B --display=0 -f 0x18800000",
+        "am start --display=0 -n a/.B -f 0x18800000",
         "am start -n a/.B --display",
         "cmd activity start-activity --display 7 --display 0 -n a/.B",
         "am start-in-vsync -n a/.B",
@@ -424,6 +424,21 @@ def test_get_current_package():
         "pm uninstall dev.x",
         "getprop a b",
         "",
+        # am start options other than the intent, --display and -f
+        "am start --display 7 -S -n a/.B -f 0x18800000",
+        "am start --display 7 --task 5 -n a/.B -f 0x18800000",
+        "am start --display 7 --user 0 -n a/.B -f 0x18800000",
+        "am start --display 7 --es k v -n a/.B -f 0x18800000",
+        "am start --display 7 -n a/.B -f 0x18800000 -W",
+        "am start --display 7 -f 0x18800000 a/.B",
+        "am start --display 7 -n a/.B -f 0x18800000 --display=7",
+        # -f missing or without NEW_TASK | MULTIPLE_TASK | EXCLUDE_FROM_RECENTS
+        "am start --display 7 -n a/.B",
+        "am start-activity --display 7 -n a/.B",
+        "am start --display 7 -n a/.B -f 0x10000000",
+        "am start --display 7 -n a/.B -f 0x18800000 -f 0x10000000",
+        "am start --display 7 -n a/.B -f abc",
+        "am start --display 7 -f 0x18800000 -n a/.B ^ screencap",
     ],
 )
 def test_execute_shell_refuses_display_0(command):
@@ -436,14 +451,17 @@ def test_execute_shell_refuses_display_0(command):
 @pytest.mark.parametrize(
     "command",
     [
-        "am start --display 7 -n a/.B",
-        "am start-activity --display 7 -n a/.B",
+        "am start --display 7 -f 0x18800000 -n a/.B",
+        (
+            "am start-activity --display 7 -f 411041792 -n a/.B -a android.intent.action.MAIN"
+            " -c android.intent.category.LAUNCHER"
+        ),
+        "am start --display 7 -f 0x1c800000 -t text/plain -d content://x -n a/.B",
         "getprop",
         "getprop ro.build.version.sdk",
         "pm list packages",
         "pm list packages -3 dev",
         "pm path dev.x",
-        "am start --display 7 -n a/.B --display=7",
     ],
 )
 def test_execute_shell_runs_other_commands(command):
@@ -482,6 +500,16 @@ def test_open_url_injection_stays_one_argument():
     words = shlex.split(cmd, posix=True)
     assert words[-2:] == ["-d", url]
     assert words[:3] == ["am", "start", "--display"]
+
+
+def test_open_url_follows_the_am_start_rules():
+    from headroid.integrations.artemis import _am_start_problem
+
+    driver, device, _ = _driver()
+    run(driver.open_url("https://example.com/"))
+    words = shlex.split(device.server.adb.calls[0][1], posix=True)
+    assert words[:2] == ["am", "start"]
+    assert _am_start_problem(words[2:], 7) is None
 
 
 def test_video_not_supported():

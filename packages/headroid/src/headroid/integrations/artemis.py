@@ -155,12 +155,12 @@ def _blank_png(width: int, height: int) -> bytes:
 
 # Shell syntax that could chain, substitute, redirect or hide a command. Quotes and backslashes too: an allowed
 # command never needs them, so nothing can be smuggled past the tokenizer.
-_SHELL_SYNTAX = set(";&|`$()<>\n\r\\'\"{}*?[]~!#")
+_SHELL_SYNTAX = set(";&|^`$()<>\n\r\\'\"{}*?[]~!#")
 
 _ALLOWED_SUMMARY = (
     "execute_shell under headroid only allows read-only package and property queries (getprop [name], pm list"
     " packages [options], pm path <package>) and launches on the hidden display (am start / am start-activity"
-    " --display {id}); nothing may read from or act on display 0 (the phone's own screen)."
+    " --display {id} -f 0x18800000 -n ...); nothing may read from or act on display 0 (the phone's own screen)."
 )
 
 
@@ -171,7 +171,7 @@ def shell_refusal(command: str, hidden_display_id: int) -> str | None:
     if set(command) & _SHELL_SYNTAX:
         return (
             refused
-            + " Shell syntax (; & | ` $ ( ) < > quotes, backslashes, newlines) is not allowed."
+            + " Shell syntax (; & | ^ ` $ ( ) < > quotes, backslashes, newlines) is not allowed."
         )
     words = shlex.split(command, posix=True)
     if not words:
@@ -184,25 +184,64 @@ def shell_refusal(command: str, hidden_display_id: int) -> str | None:
     if program == "pm" and len(args) == 2 and args[0] == "path":
         return None
     if program == "am" and args[:1] in (["start"], ["start-activity"]):
-        if _all_displays_are(args[1:], hidden_display_id):
+        why = _am_start_problem(args[1:], hidden_display_id)
+        if why is None:
             return None
         return (
-            f"refused `{command}`: `am {args[0]}` must name only this session's hidden display (--display "
-            f"{hidden_display_id}); without it Android starts the activity on display 0."
+            f"refused `{command}`: {why} execute_shell under headroid only starts activities the way headroid"
+            f" launches apps: `am {args[0]} --display {hidden_display_id} -f 0x18800000` (a new task of its own,"
+            " excluded from Recents) with only -n, -a, -d, -c or -t besides; anything else could reach display 0"
+            " (the phone's own screen) or an app the owner is using there."
         )
     return refused
 
 
-def _all_displays_are(args: list[str], hidden_display_id: int) -> bool:
-    """True when the arguments select a display and every selector is `hidden_display_id` (am takes the last
-    --display, so each one counts; a "--display=N" spelling or a missing value counts as a selector too)."""
-    displays = []
-    for i, arg in enumerate(args):
-        if arg == "--display":
-            displays.append(args[i + 1] if i + 1 < len(args) else "")
-        elif arg.startswith("--display"):
-            displays.append(arg.partition("=")[2] if arg.startswith("--display=") else "")
-    return bool(displays) and all(d == str(hidden_display_id) for d in displays)
+# Options of `am start` that only describe the intent; each takes one value.
+_AM_START_INTENT_OPTIONS = {"-n", "-a", "-d", "-c", "-t"}
+# NEW_TASK | MULTIPLE_TASK | EXCLUDE_FROM_RECENTS: a fresh task of its own, as headroid's launches
+_AM_START_REQUIRED_FLAGS = 0x10000000 | 0x08000000 | 0x00800000
+
+
+def _am_start_problem(args: list[str], hidden_display_id: int) -> str | None:
+    """What is wrong with these `am start` options, or None when they launch on the hidden display only.
+
+    Every --display must be the hidden display (am takes the last one) and every -f must carry NEW_TASK,
+    MULTIPLE_TASK and EXCLUDE_FROM_RECENTS (am takes the last one), so the activity cannot join or move an
+    existing task, possibly on display 0. Any other option (-S force-stops the app first, --task, --user, extras,
+    ...) is refused."""
+    displays: list[str] = []
+    flags: list[str] = []
+    i = 0
+    while i < len(args):
+        option = args[i]
+        if i + 1 >= len(args):
+            return f"`{option}` needs a value."
+        value = args[i + 1]
+        if option == "--display":
+            displays.append(value)
+        elif option == "-f":
+            flags.append(value)
+        elif option not in _AM_START_INTENT_OPTIONS:
+            return f"`{option}` is not allowed."
+        i += 2
+    if not displays:
+        return f"--display {hidden_display_id} is missing, so Android would start the activity on display 0."
+    wrong = [d for d in displays if d != str(hidden_display_id)]
+    if wrong:
+        return (
+            f"--display {wrong[0]} is not this session's hidden display ({hidden_display_id});"
+            " every --display must name it."
+        )
+    if not flags:
+        return "-f is missing."
+    for value in flags:
+        try:
+            bits = int(value, 0)
+        except ValueError:
+            return f"-f {value} is not a number."
+        if bits & _AM_START_REQUIRED_FLAGS != _AM_START_REQUIRED_FLAGS:
+            return f"-f {value} lacks NEW_TASK | MULTIPLE_TASK | EXCLUDE_FROM_RECENTS (0x18800000)."
+    return None
 
 
 # --- the driver -------------------------------------------------------------------------------------------------
@@ -381,8 +420,23 @@ class HeadroidDriver(BaseDeviceDriver):
     async def open_url(self, url: str) -> bool:
         """Opens the link on the hidden display (never display 0)."""
         display = self._require_display()
+        options = [
+            "--display",
+            str(display.id),
+            "-f",
+            _OPEN_URL_FLAGS,
+            "-a",
+            "android.intent.action.VIEW",
+        ]
+        options += ["-d", url]
+        why = _am_start_problem(
+            options, display.id
+        )  # the same launch rules as execute_shell's am start
+        if why:
+            raise PermissionError(f"open_url refused: {why}")
+        # one shell line for adb; the URL is a single single-quoted argument the device shell does not interpret
         quoted = "'" + url.replace("'", "'\\''") + "'"
-        cmd = f"am start --display {display.id} -f {_OPEN_URL_FLAGS} -a android.intent.action.VIEW -d {quoted}"
+        cmd = " ".join(["am", "start", *options[:-1], quoted])
         out = await asyncio.to_thread(self._adb().run, "shell", cmd)
         if "Error" in out:
             logger.warning(f"open_url failed: {out.strip()}")
