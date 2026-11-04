@@ -5,6 +5,7 @@ package dev.headroid.server.apps;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Set;
 
@@ -26,11 +27,41 @@ public class AppPresenceTest {
             "  ResumedActivity: ActivityRecord{11 u0 com.owner.music/.Player t12}");
 
     @Test
-    public void findsDisplaysFromHistoryLinesOnly() {
+    public void findsDisplaysFromHistoryLinesOnly() throws IOException {
         Assert.assertEquals(Set.of(40), AppPresence.displaysWithActivities(DUMP, "dev.headroid.sample"));
         Assert.assertEquals(Set.of(0, 41), AppPresence.displaysWithActivities(DUMP, "com.owner.music"));
         Assert.assertTrue(AppPresence.displaysWithActivities(DUMP, "com.owner").isEmpty());
-        Assert.assertTrue(AppPresence.displaysWithActivities(null, "x").isEmpty());
+    }
+
+    @Test
+    public void validDumpWithoutThePackageIsEmpty() throws IOException {
+        // headers present, no history lines of the package: it is not open anywhere, so a launch is allowed
+        String dump = String.join("\n",
+                "Display #0 (activities from top to bottom):",
+                "  * Task{a1 #12 type=home A=10100:com.miui.home U=0 visible=true}",
+                "    * Hist  #0: ActivityRecord{11 u0 com.miui.home/.launcher.Launcher t12}");
+        Assert.assertTrue(AppPresence.displaysWithActivities(dump, "com.android.chrome").isEmpty());
+    }
+
+    @Test
+    public void dumpWithoutAnyDisplayHeaderFailsClosed() {
+        // an unknown format must not read as "not open anywhere": LaunchGuard would let the launch through
+        String[] dumps = {
+            null,
+            "",
+            "Can't find service: activity",
+            "ACTIVITY MANAGER ACTIVITIES (dumpsys activity activities)\n"
+                    + "    * Hist  #0: ActivityRecord{11 u0 com.owner.music/.Player t12}",
+            "Screen #0 (activities from top to bottom):\n    * Hist  #0: ActivityRecord{11 u0 a.b/.C t1}",
+        };
+        for (String dump : dumps) {
+            try {
+                AppPresence.displaysWithActivities(dump, "com.owner.music");
+                Assert.fail("no exception for " + dump);
+            } catch (IOException e) {
+                Assert.assertTrue(e.getMessage(), e.getMessage().contains("cannot tell where com.owner.music runs"));
+            }
+        }
     }
 
     @Test
