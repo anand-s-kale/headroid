@@ -9,6 +9,8 @@ import threading
 
 import pytest
 
+pytest_plugins = ["pytester"]
+
 PNG = b"\x89PNG\r\n\x1a\nfake"
 
 
