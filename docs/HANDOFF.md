@@ -181,7 +181,10 @@ never capture display 0, and keep screenshots of the hidden display only.
      **Workaround confirmed:** with Settings > Apps > headroid sample > Battery saver > "No restrictions", 2/2 locked
      runs passed (90 s, every read OK; logcat `GreezeManager: triggerL ignore uid = 10814`). Shipped: `ui.tree`
      returns `-32014 APP_FROZEN` with that instruction when the tree is empty and a launched app's pid is in
-     Greeze's frozen list (`apps/HyperOsFreezer`), and doctor's Xiaomi warning names the setting.
+     Greeze's frozen list (`apps/HyperOsFreezer`), and doctor's Xiaomi warning names the setting. Verified on the
+     phone (default battery mode, right after a Wireless debugging toggle): read at 10 s OK, read at 21 s raised
+     `RpcError [-32014] dev.headroid.sample is frozen by HyperOS ...` with the instruction. Without a toggle, the
+     owner having just opened the app's settings page kept Greeze from freezing it for 100+ s.
    - **Leftover-process theory — disproved** (2026-11-04): a fresh locked session on a sample process left by a
      killed session passed 2 min. While testing it, found a real isolation bug instead: every session left the
      app's task in the owner's **Recents** (13 entries on the POCO F6; the server destroys the activities on
