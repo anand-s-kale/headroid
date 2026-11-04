@@ -3,6 +3,8 @@
 All notable changes are recorded here. Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
+
+## [0.1.0a3] - 2026-11-04
 ### Fixed
 - With the phone's screen off, Xiaomi HyperOS freezes the app under test after about 20 s (`GreezeManager`), so
   reads returned an empty screen. The server now returns error `-32014` naming the app and the fix (Battery saver
