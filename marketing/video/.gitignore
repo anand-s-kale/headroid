@@ -1,1 +1,4 @@
 stills/
+# the two rendered explainers are published assets (the root .gitignore ignores *.mp4)
+!headroid-explainer.mp4
+!headroid-explainer-landscape.mp4
