@@ -22,6 +22,7 @@ scrcpy (device-server/ is a fork of scrcpy-server v4.1)
 ARTEMIS (selected host modules and integrations/artemis/)
   Copyright 2026 Google LLC
   Apache License, Version 2.0 - https://github.com/google/artemis
+  Agent integration uses ARTEMIS (https://github.com/google/artemis), Apache-2.0, via the headroid-artemis fork.
 
 mobile-use (selected host modules and integrations/mobile-use/)
   Copyright 2025-2026 Minitap, Inc.

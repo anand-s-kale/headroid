@@ -20,6 +20,7 @@ Legend: ✅ works · ⚠️ works with caveats · ❌ does not work · ❔ untes
 | `FLAG_SECURE` content | ❌ | ❌ | ❌ | secure displays need root |
 | Isolated audio / notifications | ❌ | ❌ | ❌ | shared system services |
 | Runs with screen off / locked | ❔ | ❔ | ❔ | to test |
+| AI agent via ARTEMIS manual mode (`headroid mcp`) | ❔ | ❔ | ❔ | built and unit-tested, not yet run on a phone; Xiaomi needs Battery saver "No restrictions" |
 
 ## Verified devices
 

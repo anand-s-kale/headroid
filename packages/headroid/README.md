@@ -80,6 +80,15 @@ Lower-level calls (`tap`, `swipe`, `key`, `type`, `tree`, `find`) are also avail
   only while reading the screen and releases it after 5 s idle; when another tool (Appium, `uiautomator`, Maestro,
   another session) holds it, a tree read waits up to 10 s, then fails with a message naming the cause.
 
+## Use with an AI agent
+
+Coming in 0.1.0a4 (not on PyPI yet). `pip install --pre "headroid[artemis]"` (Python 3.12+) adds `headroid mcp
+[--serial S]`, an MCP server for Claude Code, Claude Desktop and other MCP clients. It exposes only
+`mobile_observe`, `mobile_act` and `mobile_session_end` on the hidden display and needs no LLM API key. Setup,
+the tool list and the limits (no HOME/APP_SWITCH/POWER/volume keys; Xiaomi needs Battery saver "No restrictions")
+are in the [main README](../../README.md#use-with-an-ai-agent-recommended-headroidartemis).
+Do not install it next to the unrelated PyPI package `artemis`: both use the import name `artemis`.
+
 ## Other commands
 
 ```

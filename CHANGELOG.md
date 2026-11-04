@@ -3,6 +3,11 @@
 All notable changes are recorded here. Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
+### Added
+- `headroid mcp [--serial S]` and the `headroid[artemis]` extra (Python 3.12+): an MCP server for Claude Code,
+  Claude Desktop and other MCP clients, built on the `headroid-artemis` fork of ARTEMIS. It exposes only
+  `mobile_observe`, `mobile_act` and `mobile_session_end` on the hidden display and needs no LLM API key. Built and
+  unit-tested; not yet run on a phone.
 
 ## [0.1.0a3] - 2026-11-04
 ### Fixed

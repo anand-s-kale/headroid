@@ -35,6 +35,42 @@ with Device.connect() as dev:
 Full guide: [packages/headroid](packages/headroid/README.md). Xiaomi/Redmi/POCO need two extra switches in Developer
 options; `headroid doctor` tells you which.
 
+## Use with an AI agent (recommended: `headroid[artemis]`)
+
+> **Coming in 0.1.0a4.** The `artemis` extra and `headroid mcp` are built and unit-tested but not yet on PyPI;
+> today `pip install --pre headroid` does not include them.
+
+Let Claude (or any MCP client) drive your app on the hidden display. The client does the thinking, so **no LLM API
+key is needed**.
+
+```
+pip install --pre "headroid[artemis]"          # Python 3.12+; pulls headroid-artemis, the ARTEMIS fork
+claude mcp add headroid -- headroid mcp        # Claude Code
+```
+
+Claude Desktop: add this to `claude_desktop_config.json` (with several devices attached, use
+`"args": ["mcp", "--serial", "<serial>"]`):
+
+```json
+{"mcpServers": {"headroid": {"command": "headroid", "args": ["mcp"]}}}
+```
+
+`headroid mcp` starts the fork's MCP server with only three tools:
+
+| Tool | What it does |
+|---|---|
+| `mobile_observe` | Screenshot plus a numbered element list of the hidden display (the screenshot is also returned inline, so Claude Desktop sees it) |
+| `mobile_act` | One action by element number: click, long_press, input_text, click_sequence, swipe, press_key, manage_app, wait_for_delay, wait_for_text, open_link, erase_one_char, focus_and_clear_text |
+| `mobile_session_end` | Closes the hidden display |
+
+The fork's other ARTEMIS tools are not exposed. Under headroid, HOME, APP_SWITCH, POWER and volume keys are refused,
+and `execute_shell` only allows `getprop`, `pm list packages`, `pm path` and `am start` on the hidden display.
+On Xiaomi/HyperOS set the app under test to Battery saver "No restrictions", or it freezes with the screen off
+(headroid then returns error `-32014` naming the fix).
+
+> **Warning:** `headroid-artemis` and the unrelated PyPI package `artemis` both install the import name `artemis`.
+> Never put them in the same environment.
+
 ---
 
 ## Why
