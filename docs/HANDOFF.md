@@ -201,7 +201,7 @@ never capture display 0, and keep screenshots of the hidden display only.
      keeps the session alive on the phone; kill leftover host scripts by command line.
 
 ## AI agent mode: `headroid mcp` (2026-11-04, branch `claude/artemis-mcp`)
-Status: **built and unit-tested; not yet run on a phone; not published.** Planned for 0.1.0a4 (Task 8), which needs
+Status: **built, unit-tested and passed on the POCO F6 (2026-11-04: `scripts/agent_e2e.py` twice, all 10 checks: launch, login, post-login form, focus on display 0 throughout, nothing left, `stay_on_while_plugged_in` unchanged); not published.** Planned for 0.1.0a4 (Task 8), which needs
 the owner's go-ahead.
 - `pip install "headroid[artemis]"` (Python 3.12+) pulls the owner's ARTEMIS fork, distributed as `headroid-artemis` +
   `headroid-artemis-client`: https://github.com/anand-s-kale/artemis, branch `headroid-artemis` (upstream
