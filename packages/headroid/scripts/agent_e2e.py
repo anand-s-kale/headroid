@@ -129,7 +129,7 @@ async def run(args: argparse.Namespace, adb: Adb, results: dict, checks: dict) -
             # Proves the display check below is not passing vacuously.
             checks["hidden_display_seen_during_run"] = leftovers(adb)[0]
 
-            home = await observe()
+            home = await observe_until("Login")
             checks["home_observed"] = (
                 home.get("status") == "success"
                 and find_index(home.get("elements_text"), "Login") is not None
