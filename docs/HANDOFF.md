@@ -201,7 +201,14 @@ never capture display 0, and keep screenshots of the hidden display only.
      keeps the session alive on the phone; kill leftover host scripts by command line.
 
 ## AI agent mode: `headroid mcp` (2026-11-04, branch `claude/artemis-mcp`)
-Status: **built, unit-tested and passed on the POCO F6 (2026-11-04: `scripts/agent_e2e.py` twice, all 10 checks: launch, login, post-login form, focus on display 0 throughout, nothing left, `stay_on_while_plugged_in` unchanged); not published.** Planned for 0.1.0a4 (Task 8), which needs
+Status: **built, unit-tested and passed on the POCO F6 (2026-11-04: `scripts/agent_e2e.py` twice, all 10 checks: launch, login, post-login form, focus on display 0 throughout, nothing left, `stay_on_while_plugged_in` unchanged); not published.**
+
+Real Claude Code run (2026-11-04, `claude -p` with only the three headroid tools, plain request "sign in to dev.headroid.sample"):
+success in 15 turns / 67 s, reached the Form screen and described it, ended the session; focus on display 0 before and after,
+no server or display left. Claude's findings: (1) `manage_app` argument names are not discoverable from the tool description
+(it tried `start`/`open` and `package_name` before `launch` + `app_name`); (2) right after a screen change the element list
+showed every element at x=1000 (activity still sliding in) until a fresh observe; (3) the sample's password field text is
+readable in the element list (accessibility exposes it). Planned for 0.1.0a4 (Task 8), which needs
 the owner's go-ahead.
 - `pip install "headroid[artemis]"` (Python 3.12+) pulls the owner's ARTEMIS fork, distributed as `headroid-artemis` +
   `headroid-artemis-client`: https://github.com/anand-s-kale/artemis, branch `headroid-artemis` (upstream
