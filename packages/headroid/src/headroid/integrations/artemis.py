@@ -17,8 +17,6 @@ import base64
 import functools
 import logging
 import os
-import posixpath
-import re
 import shlex
 import struct
 import zlib
@@ -155,244 +153,56 @@ def _blank_png(width: int, height: int) -> bytes:
 
 # --- execute_shell policy --------------------------------------------------------------------------------------
 
-_DISPLAY_0_TAIL = (
-    " headroid's ARTEMIS driver never reads from or acts on display 0 (the phone's own screen); use mobile_observe"
-    " and mobile_act, which work on the hidden display."
-)
-_UNCHECKABLE = (
-    "cannot be checked (nested shell, substitution or variable), so it might reach display 0."
-)
+# Shell syntax that could chain, substitute, redirect or hide a command. Quotes and backslashes too: an allowed
+# command never needs them, so nothing can be smuggled past the tokenizer.
+_SHELL_SYNTAX = set(";&|`$()<>\n\r\\'\"{}*?[]~!#")
 
-# Programs that read or drive display 0 whatever their arguments.
-_REFUSED_PROGRAMS = {
-    "screencap": "captures display 0.",
-    "screenrecord": "records display 0.",
-    "uiautomator": "dumps or drives display 0's UI.",
-    "input": "injects input into display 0.",
-    "monkey": "starts apps and sends events on display 0.",
-    "sendevent": "injects raw touches into display 0.",
-    "getevent": "reads the owner's touches on display 0.",
-    "wm": "reads or changes display 0's size and density.",
-}
-# Programs that run other commands headroid cannot see into.
-_UNCHECKABLE_PROGRAMS = {
-    "sh",
-    "bash",
-    "mksh",
-    "ash",
-    "zsh",
-    "dash",
-    "eval",
-    "source",
-    ".",
-    "su",
-    "xargs",
-    "run-as",
-    "app_process",
-    "dalvikvm",
-    "service",
-    "nsenter",
-    "chroot",
-    "strace",
-    "setsid",
-    "logwrapper",
-    "stdbuf",
-    "ionice",
-    "chrt",
-    "taskset",
-    "watch",
-    "flock",
-}
-# Refused wherever they appear in a command, not only as its program (they are not ordinary words).
-_REFUSED_ANYWHERE = {"screencap", "screenrecord", "uiautomator", "monkey", "sendevent", "getevent"}
-_TEXT_FILTERS = {
-    "grep",
-    "egrep",
-    "fgrep",
-    "echo",
-    "printf",
-    "sed",
-    "awk",
-    "cut",
-    "sort",
-    "uniq",
-    "head",
-    "tail",
-    "wc",
-    "tr",
-}
-_WRAPPERS = {
-    "exec",
-    "command",
-    "builtin",
-    "nohup",
-    "time",
-    "toybox",
-    "busybox",
-    "{",
-    "}",
-    "!",
-    "if",
-    "then",
-    "else",
-    "elif",
-    "do",
-    "while",
-    "until",
-    "done",
-    "fi",
-}
-_AM_REFUSED = {
-    "instrument": "runs instrumentation on display 0.",
-    "switch-user": "switches the whole phone to another user.",
-    "stack": "moves tasks between displays.",
-    "task": "moves tasks between displays.",
-    "display": "changes displays.",
-}
-_AM_STOPS = {"force-stop", "kill", "kill-all", "stop-app"}
-_DUMPSYS_REFUSED = {
-    "window",
-    "activity",
-    "surfaceflinger",
-    "accessibility",
-    "display",
-    "input",
-    "statusbar",
-}
-_CMD_REFUSED = {"input", "window", "statusbar", "display", "accessibility"}
-_ASSIGNMENT = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=")
+_ALLOWED_SUMMARY = (
+    "execute_shell under headroid only allows read-only package and property queries (getprop [name], pm list"
+    " packages [options], pm path <package>) and launches on the hidden display (am start / am start-activity"
+    " --display {id}); nothing may read from or act on display 0 (the phone's own screen)."
+)
 
 
 def shell_refusal(command: str, hidden_display_id: int) -> str | None:
-    """Why `command` must not run on the phone, or None. A best-effort backstop: ARTEMIS's manual-mode actions
-    do not shell out on the headroid driver; this catches any path that still would."""
-    if "$(" in command or "`" in command or "<(" in command or ">(" in command:
-        return f"`{command}` {_UNCHECKABLE}"
-    lexer = shlex.shlex(
-        command.replace("\r", "\n").replace("\n", " ; "), posix=True, punctuation_chars=True
-    )
-    lexer.whitespace_split = True
-    lexer.commenters = ""  # check what a comment would hide too
-    try:
-        tokens = list(lexer)
-    except ValueError as e:
-        return f"`{command}` cannot be parsed ({e}), so it might reach display 0."
-    for words in _segments(tokens):
-        why = _segment_refusal(words, hidden_display_id)
-        if why:
-            return why
-    return None
-
-
-def _segments(tokens: list[str]) -> list[list[str]]:
-    """Splits shell tokens into simple commands, dropping redirections."""
-    segments: list[list[str]] = [[]]
-    skip_next = False
-    for i, token in enumerate(tokens):
-        if skip_next:
-            skip_next = False
-            continue
-        if token and set(token) <= set("();<>|&"):
-            # the lexer joins adjacent operators (";>", "&>", ">&"), so a token can both end a command and
-            # start a redirection
-            redirect = bool(set(token) & set("<>"))
-            if set(token) & set(";|()") or ("&" in token and not redirect):
-                segments.append([])
-            skip_next = redirect  # drop the redirection's target
-            continue
-        if token.isdigit() and i + 1 < len(tokens) and tokens[i + 1].startswith(("<", ">")):
-            continue  # the fd of "2>file"
-        segments[-1].append(token)
-    return [s for s in segments if s]
-
-
-def _unwrap(words: list[str]) -> list[str]:
-    """Drops variable assignments and wrappers (exec, nohup, toybox, env, nice, timeout, ...)."""
-    while words:
-        first = posixpath.basename(words[0])
-        if _ASSIGNMENT.match(words[0]) or first in _WRAPPERS:
-            words = words[1:]
-        elif first == "env":
-            words = words[1:]
-            while words and (words[0].startswith("-") or _ASSIGNMENT.match(words[0])):
-                words = words[2:] if words[0] in ("-u", "-C") else words[1:]
-        elif first == "nice":
-            words = words[1:]
-            if words[:1] == ["-n"]:
-                words = words[2:]
-            elif words and re.fullmatch(r"-\d+", words[0]):
-                words = words[1:]
-        elif first == "timeout":
-            words = words[1:]
-            while words and words[0].startswith("-"):
-                words = words[2:] if words[0] in ("-s", "-k") else words[1:]
-            words = words[1:]  # the duration
-        else:
-            break
-    return words
-
-
-def _segment_refusal(words: list[str], hidden_display_id: int) -> str | None:
-    words = _unwrap(words)
+    """Why `command` must not run on the phone, or None. A strict allow-list: ARTEMIS's manual-mode actions do
+    not shell out on the headroid driver, so this backstop only lets through what cannot reach display 0."""
+    refused = f"refused `{command}`: " + _ALLOWED_SUMMARY.format(id=hidden_display_id)
+    if set(command) & _SHELL_SYNTAX:
+        return (
+            refused
+            + " Shell syntax (; & | ` $ ( ) < > quotes, backslashes, newlines) is not allowed."
+        )
+    words = shlex.split(command, posix=True)
     if not words:
+        return refused
+    program, args = words[0], words[1:]
+    if program == "getprop" and len(args) <= 1:
         return None
-    program = posixpath.basename(words[0])
-    args = words[1:]
-    shown = " ".join(words)
-    if "$" in program or set(program) & set("*?[{"):
-        return f"`{shown}` {_UNCHECKABLE}"
-    # a text filter's arguments are patterns, not commands ("pm list packages | grep monkey")
-    for word in words[:1] if program in _TEXT_FILTERS else words:
-        name = posixpath.basename(word)
-        if name in _REFUSED_ANYWHERE:
-            return f"refused `{shown}`: `{name}` {_REFUSED_PROGRAMS[name]}{_DISPLAY_0_TAIL}"
-    if program in _UNCHECKABLE_PROGRAMS:
-        return f"`{shown}` runs another command that {_UNCHECKABLE}"
-    if program == "find" and set(args) & {"-exec", "-execdir", "-ok", "-okdir"}:
-        return f"`{shown}` runs another command that {_UNCHECKABLE}"
-    if program in _REFUSED_PROGRAMS:
-        return f"refused `{shown}`: `{program}` {_REFUSED_PROGRAMS[program]}{_DISPLAY_0_TAIL}"
-    if program == "am":
-        return _am_refusal(args, shown, hidden_display_id)
-    if program == "cmd" and args:
-        service = args[0].lower()
-        if service == "activity":
-            return _am_refusal(args[1:], shown, hidden_display_id)
-        if service in _CMD_REFUSED:
-            return (
-                f"refused `{shown}`: `cmd {service}` reads or acts on display 0.{_DISPLAY_0_TAIL}"
-            )
-    if program == "dumpsys":
-        services = [a for a in args if not a.startswith("-") and not a.isdigit()]
-        if not services or services[0].lower() in _DUMPSYS_REFUSED:
-            return f"refused `{shown}`: it reports what display 0 shows.{_DISPLAY_0_TAIL}"
-    return None
-
-
-def _am_refusal(args: list[str], shown: str, hidden_display_id: int) -> str | None:
-    sub = args[0] if args else ""
-    if sub in ("start", "start-activity", "start-in-vsync"):
-        # am takes the last --display; require every one (and any "--display=N" spelling) to be ours
-        displays = []
-        for i, arg in enumerate(args):
-            if arg == "--display":
-                displays.append(args[i + 1] if i + 1 < len(args) else "")
-            elif arg.startswith("--display"):
-                displays.append(arg.partition("=")[2] if arg.startswith("--display=") else "")
-        if displays and all(d == str(hidden_display_id) for d in displays):
+    if program == "pm" and args[:2] == ["list", "packages"]:
+        return None
+    if program == "pm" and len(args) == 2 and args[0] == "path":
+        return None
+    if program == "am" and args[:1] in (["start"], ["start-activity"]):
+        if _all_displays_are(args[1:], hidden_display_id):
             return None
         return (
-            f"refused `{shown}`: `am {sub}` must name this session's hidden display (--display "
-            f"{hidden_display_id}); without it Android starts the activity on display 0.{_DISPLAY_0_TAIL}"
+            f"refused `{command}`: `am {args[0]}` must name only this session's hidden display (--display "
+            f"{hidden_display_id}); without it Android starts the activity on display 0."
         )
-    if sub in _AM_REFUSED:
-        return f"refused `{shown}`: `am {sub}` {_AM_REFUSED[sub]}{_DISPLAY_0_TAIL}"
-    if sub in _AM_STOPS:
-        return (
-            f"refused `{shown}`: it could stop an app the owner is using on display 0; use manage_app stop, which"
-            " stops an app only when nobody else has it open."
-        )
-    return None
+    return refused
+
+
+def _all_displays_are(args: list[str], hidden_display_id: int) -> bool:
+    """True when the arguments select a display and every selector is `hidden_display_id` (am takes the last
+    --display, so each one counts; a "--display=N" spelling or a missing value counts as a selector too)."""
+    displays = []
+    for i, arg in enumerate(args):
+        if arg == "--display":
+            displays.append(args[i + 1] if i + 1 < len(args) else "")
+        elif arg.startswith("--display"):
+            displays.append(arg.partition("=")[2] if arg.startswith("--display=") else "")
+    return bool(displays) and all(d == str(hidden_display_id) for d in displays)
 
 
 # --- the driver -------------------------------------------------------------------------------------------------

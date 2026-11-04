@@ -4,6 +4,7 @@
 
 import asyncio
 import base64
+import shlex
 import zlib
 
 import pytest
@@ -403,6 +404,26 @@ def test_get_current_package():
         "cmd activity start-activity --display 7 --display 0 -n a/.B",
         "am start-in-vsync -n a/.B",
         "echo hi | screencap -p",
+        # allowed by the old deny-list, refused by the allow-list
+        "dumpsys battery",
+        "cmd package list packages",
+        "getprop ro.serialno 2>&1",
+        "pm list packages | grep input",
+        "pm list packages | grep monkey",
+        # bypasses found in review
+        "awk 'BEGIN{system(ARGV[1])}' screencap",
+        "echo screencap -p /sdcard/a.png | awk '{system($0)}'",
+        "echo uiautomator dump > /data/local/tmp/s && chmod +x /data/local/tmp/s && /data/local/tmp/s",
+        "awk 'BEGIN{system(\"input tap 1 1\")}'",
+        "awk -f /data/local/tmp/x.awk",
+        "/data/local/tmp/s",
+        "am broadcast -a android.intent.action.CLOSE_SYSTEM_DIALOGS",
+        "am start-foreground-service -n a/.S",
+        "am force-stop dev.x",
+        "pm path",
+        "pm uninstall dev.x",
+        "getprop a b",
+        "",
     ],
 )
 def test_execute_shell_refuses_display_0(command):
@@ -416,13 +437,12 @@ def test_execute_shell_refuses_display_0(command):
     "command",
     [
         "am start --display 7 -n a/.B",
+        "am start-activity --display 7 -n a/.B",
+        "getprop",
         "getprop ro.build.version.sdk",
         "pm list packages",
-        "dumpsys battery",
-        "cmd package list packages",
-        "getprop ro.serialno 2>&1",
-        "pm list packages | grep input",
-        "pm list packages | grep monkey",
+        "pm list packages -3 dev",
+        "pm path dev.x",
         "am start --display 7 -n a/.B --display=7",
     ],
 )
@@ -451,6 +471,17 @@ def test_open_url_quotes_the_url():
     run(driver.open_url("https://e.com/'; screencap -p; '"))
     cmd = device.server.adb.calls[0][1]
     assert cmd.endswith("-d 'https://e.com/'\\''; screencap -p; '\\'''")
+
+
+def test_open_url_injection_stays_one_argument():
+    driver, device, _ = _driver()
+    url = "x'; screencap -p /sdcard/a.png; echo '"
+    run(driver.open_url(url))
+    cmd = device.server.adb.calls[0][1]
+    # the device shell parses the line back into the same arguments: the URL is one -d value
+    words = shlex.split(cmd, posix=True)
+    assert words[-2:] == ["-d", url]
+    assert words[:3] == ["am", "start", "--display"]
 
 
 def test_video_not_supported():
