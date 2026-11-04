@@ -90,6 +90,8 @@ needs an explicit `packages:` list on current runners (its default `tools` packa
   all PASS and launch worked on the POCO F6. The `pypi` GitHub environment was auto-created without a reviewer.
   **0.1.0a2 published 2026-11-04** (Recents fix, UiAutomation idle 5 s); verified the same way from a clean venv:
   doctor all PASS, launch OK, no sample entry in the visible Recents.
+  **0.1.0a3 published 2026-11-04** (HyperOS freeze error -32014, doctor tip); clean venv: doctor tip shown, launch OK,
+  published jar contains `HyperOsFreezer`.
 - Open: in the third 60-min run the sample app on the hidden display ended between minute 12 and 13 with no kill
   line in the log (headroid's guard was not involved: the next process was started by another session). Possibly
   HyperOS power management; the fourth run logs the app pid and uid state every minute.
