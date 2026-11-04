@@ -93,11 +93,21 @@ async def run(args: argparse.Namespace, adb: Adb, results: dict, checks: dict) -
         async def observe() -> dict:
             return payload(await session.call_tool("mobile_observe", {}))
 
-        async def act(action: str, **a) -> dict:
-            res = payload(await session.call_tool("mobile_act", {"action": action, "args": a}))
+        async def act(tool_action: str, **a) -> dict:
+            # tool_action, not action: manage_app takes its own "action" argument
+            res = payload(await session.call_tool("mobile_act", {"action": tool_action, "args": a}))
             if res.get("status") != "success":
-                raise RuntimeError(f"mobile_act {action} {a.get('target', '')} failed: {res}")
+                raise RuntimeError(f"mobile_act {tool_action} {a.get('target', '')} failed: {res}")
             return res
+
+        async def observe_until(label: str, timeout_s: float = 10.0) -> dict:
+            # an agent waits for the next screen: right after a tap the new activity may still be sliding in
+            deadline = time.monotonic() + timeout_s
+            while True:
+                view = await observe()
+                if find_index(view.get("elements_text"), label) is not None or time.monotonic() > deadline:
+                    return view
+                await asyncio.sleep(0.5)
 
         async def tap(label: str, view: dict) -> dict:
             idx = find_index(view.get("elements_text"), label)
@@ -126,7 +136,7 @@ async def run(args: argparse.Namespace, adb: Adb, results: dict, checks: dict) -
             )
             await tap("Login", home)
 
-            view = await observe()
+            view = await observe_until("Email")
             for label, value in (("Email", EMAIL), ("Password", PASSWORD)):
                 idx = find_index(view.get("elements_text"), label)
                 if idx is None:
@@ -136,7 +146,7 @@ async def run(args: argparse.Namespace, adb: Adb, results: dict, checks: dict) -
             await tap("Sign in", view)
             focus["after_login"] = top_focused_display(adb)
 
-            after = await observe()
+            after = await observe_until("Submit")
             results["post_login_elements"] = after.get("elements_text")
             # FormActivity is where a successful login lands; the login screen has no Submit.
             checks["post_login_observed"] = find_index(after.get("elements_text"), "Submit") is not None
