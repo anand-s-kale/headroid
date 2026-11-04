@@ -216,11 +216,12 @@ readable in the element list (accessibility exposes it). The two rough edges (1)
   exposing only `mobile_observe`, `mobile_act` and `mobile_session_end` (`ARTEMIS_MCP_TOOLS`), with screenshots
   returned inline (`ARTEMIS_MCP_INLINE_SCREENSHOT=1`). No LLM key: the MCP client thinks.
 - Under headroid: `press_key` is an allow-list (editing/navigation keys and printable characters; HOME, APP_SWITCH,
-  POWER, volume, call, media, camera, ... refused); `open_link` refused until headroid has an `app.openUrl` RPC (use
-  manage_app); ARTEMIS's keep-awake service is off; `execute_shell` allows only getprop, pm list packages,
+  POWER, volume, call, media, camera, ... refused); `open_link` goes through headroid's `app.openUrl` RPC (the one app that
+  handles the link, launched on the hidden display like `app.launch`: muted, own task, stopped at teardown; refused
+  with INVALID_PARAMS when nothing or a chooser resolves); ARTEMIS's keep-awake service is off; `execute_shell` allows only getprop, pm list packages,
   pm path, am start on the hidden display; Xiaomi/HyperOS needs Battery saver "No restrictions" or error `-32014`.
 - `headroid-artemis` and the unrelated PyPI `artemis` share the import name `artemis`: keep them in separate envs.
-- Still to do: agent mode with the screen off; `open_link` via a headroid `app.openUrl` RPC; check singleTask
+- Still to do: agent mode with the screen off; exercise `app.openUrl` / `open_link` on a device; check singleTask
   activities do not reuse a task on display 0; exercise `input.clearText` on a device.
 
 ## Next work (in order)

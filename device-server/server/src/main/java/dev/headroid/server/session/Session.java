@@ -6,6 +6,7 @@ import dev.headroid.server.apps.AppLauncher;
 import dev.headroid.server.apps.AppMuter;
 import dev.headroid.server.apps.AppPresence;
 import dev.headroid.server.apps.HyperOsFreezer;
+import dev.headroid.server.apps.UrlHandler;
 import dev.headroid.server.display.DisplayFlags;
 import dev.headroid.server.display.DisplayRegistry;
 import dev.headroid.server.display.HiddenDisplay;
@@ -21,6 +22,7 @@ import dev.headroid.server.ui.UiAutomationHost;
 import com.genymobile.scrcpy.BuildConfig;
 import com.genymobile.scrcpy.util.Ln;
 
+import android.content.ComponentName;
 import android.os.Build;
 import android.system.Os;
 
@@ -107,6 +109,20 @@ public final class Session {
             AppLauncher.launch(displayId, pkg, p.optString("activity", null), forceStop);
             launchedPackages.add(pkg);
             return null;
+        });
+        d.register("app.openUrl", p -> {
+            int displayId = displays.require(p.getInt("displayId")).id();
+            String url = p.getString("url");
+            // the handling app must be known before the launch, for the same muting and teardown as app.launch
+            ComponentName handler = UrlHandler.resolve(url);
+            String pkg = handler.getPackageName();
+            runningBeforeLaunch.putIfAbsent(pkg, AppPresence.isRunning(pkg));
+            if (p.optBool("mute", true)) {
+                muter.mute(pkg, false);
+            }
+            AppLauncher.openUrl(displayId, handler, url);
+            launchedPackages.add(pkg);
+            return Collections.singletonMap("package", pkg);
         });
         d.register("app.stop", p -> {
             String pkg = p.getString("package");

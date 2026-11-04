@@ -60,7 +60,7 @@ Claude Desktop: add this to `claude_desktop_config.json` (with several devices a
 | Tool | What it does |
 |---|---|
 | `mobile_observe` | Screenshot plus a numbered element list of the hidden display (the screenshot is also returned inline, so Claude Desktop sees it) |
-| `mobile_act` | One action by element number: click, long_press, input_text, click_sequence, swipe, press_key, manage_app, wait_for_delay, wait_for_text, erase_one_char, focus_and_clear_text (`open_link` is not available on the hidden display yet: launch the app with `manage_app`) |
+| `mobile_act` | One action by element number: click, long_press, input_text, click_sequence, swipe, press_key, manage_app, wait_for_delay, wait_for_text, erase_one_char, focus_and_clear_text, open_link (opens the link on the hidden display with the one app that handles it, muted and stopped at the end like `manage_app`; refused when no app or several apps handle it) |
 | `mobile_session_end` | Closes the hidden display |
 
 The fork's other ARTEMIS tools are not exposed. Under headroid, `press_key` only sends editing and navigation keys

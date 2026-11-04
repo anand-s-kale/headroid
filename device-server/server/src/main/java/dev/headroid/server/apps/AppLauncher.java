@@ -13,6 +13,7 @@ import android.app.ActivityOptions;
 import android.content.ComponentName;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.net.Uri;
 
 /** Starts and stops apps on hidden displays. */
 public final class AppLauncher {
@@ -46,6 +47,20 @@ public final class AppLauncher {
                 throw new RpcException(RpcException.INVALID_PARAMS, "package: no launchable activity in " + packageName);
             }
         }
+        start(displayId, intent, packageName, forceStop);
+    }
+
+    /** Opens {@code url} with exactly {@code handler} (from {@link UrlHandler#resolve}), so no chooser can appear. */
+    public static void openUrl(int displayId, ComponentName handler, String url) {
+        if (displayId == 0) {
+            throw new IllegalArgumentException("never launch on display 0");
+        }
+        Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
+        intent.setComponent(handler);
+        start(displayId, intent, handler.getPackageName(), false);
+    }
+
+    private static void start(int displayId, Intent intent, String packageName, boolean forceStop) {
         intent.addFlags(LAUNCH_FLAGS);
 
         ActivityOptions options = ActivityOptions.makeBasic();

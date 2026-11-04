@@ -58,7 +58,9 @@ with Device.connect() as dev:                      # jar found automatically
 `click`, `fill` and `wait_for` take `text=`, `rid=` or `desc=` and a `timeout` (default 10 s). They wait
 until the node is visible, fully on the display and at the same position on two reads in a row, because
 during an activity transition nodes are reported at animated positions and an immediate tap misses.
-Lower-level calls (`tap`, `swipe`, `key`, `type`, `tree`, `find`) are also available.
+Lower-level calls (`tap`, `swipe`, `key`, `type`, `tree`, `find`) are also available. `d.open_url(url)` opens a
+link on the hidden display with the one app that handles it, launched and muted like `launch`, and returns that
+app's package; it raises `RpcError` when no app handles the link or Android would ask which app to use.
 
 ## What stays with you, and what does not
 
@@ -85,7 +87,7 @@ Lower-level calls (`tap`, `swipe`, `key`, `type`, `tree`, `find`) are also avail
 New in 0.1.0a4. `pip install --pre "headroid[artemis]"` (Python 3.12+) adds `headroid mcp
 [--serial S]`, an MCP server for Claude Code, Claude Desktop and other MCP clients. It exposes only
 `mobile_observe`, `mobile_act` and `mobile_session_end` on the hidden display and needs no LLM API key. Setup,
-the tool list and the limits (only editing, navigation and printable keys; no `open_link` yet; Xiaomi needs Battery
+the tool list and the limits (only editing, navigation and printable keys; `open_link` opens links on the hidden display; Xiaomi needs Battery
 saver "No restrictions") are in the
 [main README](https://github.com/anand-s-kale/headroid/blob/main/README.md#use-with-an-ai-agent-recommended-headroidartemis).
 Do not install it next to the unrelated PyPI package `artemis`: both use the import name `artemis`.

@@ -3,6 +3,13 @@
 All notable changes are recorded here. Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
+### Added
+- `open_link` works on the hidden display. The device server has a new `app.openUrl` RPC (`Display.open_url(url)`
+  in Python, returning the package): it resolves the one app that handles the link and launches it like
+  `app.launch` (own task, excluded from Recents, muted, stopped at the end of the session, named by the HyperOS
+  freeze message). A link that no app handles, or that Android would show the "Open with" chooser for, is refused.
+  `HeadroidDriver.open_url` uses it instead of a raw `am start`, and the `headroid-artemis` fork's `open_link`
+  calls it again (needs the next fork release). Unit-tested; not yet run on a phone.
 
 ## [0.1.0a4] - 2026-11-04
 ### Added

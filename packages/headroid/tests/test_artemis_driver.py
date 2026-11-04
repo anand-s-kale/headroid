@@ -4,7 +4,6 @@
 
 import asyncio
 import base64
-import shlex
 import zlib
 
 import pytest
@@ -74,6 +73,7 @@ class FakeDisplay:
         self.tree_sequence = []  # when set, successive tree() reads pop from here (the last one repeats)
         self.screenshot_result = PNG
         self.stop_result = {"stopped": True}
+        self.open_url_result = "com.android.chrome"
 
     def _answer(self, result):
         if isinstance(result, Exception):
@@ -111,6 +111,10 @@ class FakeDisplay:
 
     def launch(self, package):
         self.calls.append(("launch", package))
+
+    def open_url(self, url):
+        self.calls.append(("open_url", url))
+        return self._answer(self.open_url_result)
 
     def stop(self, package):
         self.calls.append(("stop", package))
@@ -654,46 +658,28 @@ def test_execute_shell_runs_other_commands(command):
     assert device.server.adb.calls == [("shell", command)]
 
 
-def test_open_url_targets_hidden_display():
+def test_open_url_opens_through_headroid():
+    # app.openUrl mutes the app and stops it at teardown, which a raw `am start` did not
     driver, device, _ = _driver()
     assert run(driver.open_url("https://example.com/a?b=1")) is True
-    assert device.server.adb.calls == [
-        (
-            "shell",
-            (
-                "am start --display 7 -f 0x18800000 -a android.intent.action.VIEW"
-                " -d 'https://example.com/a?b=1'"
-            ),
-        )
-    ]
+    assert ("open_url", "https://example.com/a?b=1") in device.calls
+    assert device.server.adb.calls == []
 
 
-def test_open_url_quotes_the_url():
-    driver, device, _ = _driver()
-    run(driver.open_url("https://e.com/'; screencap -p; '"))
-    cmd = device.server.adb.calls[0][1]
-    assert cmd.endswith("-d 'https://e.com/'\\''; screencap -p; '\\'''")
-
-
-def test_open_url_injection_stays_one_argument():
+def test_open_url_keeps_the_url_as_one_value():
     driver, device, _ = _driver()
     url = "x'; screencap -p /sdcard/a.png; echo '"
     run(driver.open_url(url))
-    cmd = device.server.adb.calls[0][1]
-    # the device shell parses the line back into the same arguments: the URL is one -d value
-    words = shlex.split(cmd, posix=True)
-    assert words[-2:] == ["-d", url]
-    assert words[:3] == ["am", "start", "--display"]
+    assert ("open_url", url) in device.calls
+    assert device.server.adb.calls == []  # never a shell line
 
 
-def test_open_url_follows_the_am_start_rules():
-    from headroid.integrations.artemis import _am_start_problem
-
+def test_open_url_raises_headroids_reason():
     driver, device, _ = _driver()
-    run(driver.open_url("https://example.com/"))
-    words = shlex.split(device.server.adb.calls[0][1], posix=True)
-    assert words[:2] == ["am", "start"]
-    assert _am_start_problem(words[2:], 7) is None
+    device.displays[0].open_url_result = RpcError(-32602, "url: no single app handles x:y")
+    with pytest.raises(RpcError, match="no single app handles"):
+        run(driver.open_url("x:y"))
+    assert device.server.adb.calls == []
 
 
 def test_video_not_supported():

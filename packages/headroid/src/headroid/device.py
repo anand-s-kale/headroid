@@ -59,6 +59,15 @@ class Display:
             muteNotifications=mute_notifications,
         )
 
+    def open_url(self, url: str, mute: bool = True) -> str:
+        """Opens the link on this display with the one app that handles it, and returns that app's package.
+
+        The app is launched like launch() does (own task, excluded from Recents, muted unless mute=False, stopped
+        at the end of the session). RpcError INVALID_PARAMS when no app handles the link, or several do and
+        Android would ask which one to use.
+        """
+        return self._c.call("app.openUrl", displayId=self.id, url=url, mute=mute)["package"]
+
     def stop(self, package: str) -> dict:
         """Force-stops the app unless someone else uses it (it ran before headroid launched it, or it has
         activities on a display this session does not own). Returns {"stopped": bool} plus "reason" when not."""
