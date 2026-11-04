@@ -232,6 +232,9 @@ readable in the element list (accessibility exposes it). The two rough edges (1)
   activities do not reuse a task on display 0; exercise `input.clearText` on a device.
 
 ## Follow-up session 2026-11-04: open_url, launch guard, Page/Locator/expect, pytest plugin (branch `claude/next`)
+**Released 2026-11-04: headroid 0.1.0a5 and headroid-artemis / headroid-artemis-client 0.1.0a2.** Clean Python 3.13
+venv `pip install --pre "headroid[artemis,test]"`: the pytest phone checks passed 3/3 and the agent e2e 10/10 on the POCO F6.
+(PyPI's simple index lagged a few minutes behind the upload, so the first resolve right after publishing failed.)
 On the POCO F6 (Wi-Fi adb), all with focus on display 0 throughout:
 - `Page`/`Locator`/`expect` via the pytest plugin (`headroid_page`): sample login, then `fill` replaces a field's text
   ("first value" -> "second", so `input.clearText` works on a real field). Found and fixed: Android reports button
