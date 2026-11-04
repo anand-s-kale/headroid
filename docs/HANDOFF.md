@@ -245,8 +245,13 @@ On the POCO F6 (Wi-Fi adb), all with focus on display 0 throughout:
 - Screen off (sample set to Battery saver "No restrictions"): agent e2e 10/10, but the phone was woken ~18 s into
   the run by `cmd power` from the PC (shell uid, `details=PowerCommand`). Cause: about ten of the owner's own
   ARTEMIS MCP servers (`~/artemis/.venv ... -m mcp_server`, started by MCP clients) run ARTEMIS's keep-awake
-  service against any attached phone. headroid mode has that service off. A clean screen-off agent run needs those
-  servers closed for the duration.
+  service against any attached phone. headroid mode has that service off. Proven by three more locked runs:
+  (a) locked and idle for 70 s with no headroid activity: no wake; (b) a device-side watcher saw `cmd power
+  set-wakelock list`, `input keyevent KEYCODE_WAKEUP`, `svc power stayon usb` and `KEYCODE_UNKNOWN` heartbeats sent
+  through adbd; (c) a PC-side watcher traced each to `~/artemis/.venv/Scripts/python.exe -m mcp_server`
+  (nine separate PIDs within 5 s), never to the `headroid mcp` process. They react when the phone's adb state
+  changes during a headroid run. Fix on the owner's side: `ARTEMIS_KEEP_DEVICE_AWAKE=0` in `~/artemis/.env` (or
+  close those MCP clients) before a screen-off run. Every locked agent run still passed 10/10.
 
 ## Next work (in order)
 1. Run the checklist above with the owner; fix what fails.
