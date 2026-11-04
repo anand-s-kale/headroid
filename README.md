@@ -87,13 +87,16 @@ Claude Desktop: add this to `claude_desktop_config.json` (with several devices a
 | Tool | What it does |
 |---|---|
 | `mobile_observe` | Screenshot plus a numbered element list of the hidden display (the screenshot is also returned inline, so Claude Desktop sees it) |
-| `mobile_act` | One action by element number: click, long_press, input_text, click_sequence, swipe, press_key, manage_app, wait_for_delay, wait_for_text, erase_one_char, focus_and_clear_text (`open_link` is not available on the hidden display yet: launch the app with `manage_app`) |
+| `mobile_act` | One action by element number: click, long_press, input_text, click_sequence, swipe, press_key, manage_app, wait_for_delay, wait_for_text, erase_one_char, focus_and_clear_text, open_link (opens the link on the hidden display with the one app that handles it, sound and vibration muted and stopped at the end like `manage_app`; notifications are not blocked; refused when no app handles it, when Android would ask which app to use, or while that app is open on the phone's own screen) |
 | `mobile_session_end` | Closes the hidden display |
 
 The fork's other ARTEMIS tools are not exposed. Under headroid, `press_key` only sends editing and navigation keys
 (back, enter, delete, forward delete, tab, space, escape, move home/end, D-pad, menu) and printable characters; HOME,
 APP_SWITCH, POWER, volume, call, media, camera and every other key are refused. `execute_shell` only allows
-`getprop`, `pm list packages`, `pm path` and `am start` on the hidden display. headroid mcp never changes the phone's
+`getprop`, `pm list packages`, `pm path` and `am start` on the hidden display. `open_link` needs a URL with a
+scheme and refuses `intent`, `android-app`, `file`, `content`, `data`, `javascript`, `about`, `tel`, `sms`, `smsto`, `mms`, `mmsto`, `mailto`, `voicemail`, `geo`, `market` links. `manage_app` refuses to launch an app whose
+start activity is singleTask or singleInstance while the app is open on the phone's own screen (Android would
+move that task instead of opening the app on the hidden display). headroid mcp never changes the phone's
 settings and turns off ARTEMIS's keep-awake service, which would wake the phone's own screen.
 The agent sees the text of the fields in the app under test, password fields included, because Android's accessibility
 layer exposes it: do not test with real credentials.

@@ -12,7 +12,10 @@ import com.genymobile.scrcpy.wrappers.ServiceManager;
 import android.app.ActivityOptions;
 import android.content.ComponentName;
 import android.content.Intent;
+import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
+import android.content.pm.ResolveInfo;
+import android.net.Uri;
 
 /** Starts and stops apps on hidden displays. */
 public final class AppLauncher {
@@ -30,22 +33,47 @@ public final class AppLauncher {
         // not instantiable
     }
 
-    public static void launch(int displayId, String packageName, String activity, boolean forceStop) {
+    /** The intent app.launch starts: the explicit {@code activity} when given, else the package's launcher activity. */
+    public static Intent launchIntent(String packageName, String activity) {
+        if (activity != null) {
+            String className = activity.startsWith(".") ? packageName + activity : activity;
+            Intent intent = new Intent(Intent.ACTION_MAIN);
+            intent.setComponent(new ComponentName(packageName, className));
+            return intent;
+        }
+        PackageManager pm = FakeContext.get().getPackageManager();
+        Intent intent = Device.getLaunchIntent(pm, packageName);
+        if (intent == null) {
+            throw new RpcException(RpcException.INVALID_PARAMS, "package: no launchable activity in " + packageName);
+        }
+        return intent;
+    }
+
+    /** The launch mode of the activity {@code intent} starts (ActivityInfo.LAUNCH_*), standard when it does not resolve. */
+    public static int launchMode(Intent intent) {
+        ResolveInfo info = FakeContext.get().getPackageManager().resolveActivity(intent, 0);
+        return info == null || info.activityInfo == null ? ActivityInfo.LAUNCH_MULTIPLE : info.activityInfo.launchMode;
+    }
+
+    /** Starts {@code intent} (from {@link #launchIntent}) of {@code packageName} on the display. */
+    public static void launch(int displayId, Intent intent, String packageName, boolean forceStop) {
         if (displayId == 0) {
             throw new IllegalArgumentException("never launch on display 0");
         }
-        Intent intent;
-        if (activity != null) {
-            String className = activity.startsWith(".") ? packageName + activity : activity;
-            intent = new Intent(Intent.ACTION_MAIN);
-            intent.setComponent(new ComponentName(packageName, className));
-        } else {
-            PackageManager pm = FakeContext.get().getPackageManager();
-            intent = Device.getLaunchIntent(pm, packageName);
-            if (intent == null) {
-                throw new RpcException(RpcException.INVALID_PARAMS, "package: no launchable activity in " + packageName);
-            }
+        start(displayId, intent, packageName, forceStop);
+    }
+
+    /** Opens {@code url} with exactly {@code handler} (from {@link UrlHandler#resolve}), so no chooser can appear. */
+    public static void openUrl(int displayId, ActivityInfo handler, String url) {
+        if (displayId == 0) {
+            throw new IllegalArgumentException("never launch on display 0");
         }
+        Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
+        intent.setComponent(new ComponentName(handler.packageName, handler.name));
+        start(displayId, intent, handler.packageName, false);
+    }
+
+    private static void start(int displayId, Intent intent, String packageName, boolean forceStop) {
         intent.addFlags(LAUNCH_FLAGS);
 
         ActivityOptions options = ActivityOptions.makeBasic();

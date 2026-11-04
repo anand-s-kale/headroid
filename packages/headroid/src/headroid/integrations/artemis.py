@@ -45,9 +45,6 @@ SETTLE_DEADLINE_SECONDS = 2.0  # after this the latest read is returned, settled
 
 NO_FRAME = -32011  # the display has not drawn anything yet (no app on it)
 
-# FLAG_ACTIVITY_NEW_TASK | FLAG_ACTIVITY_MULTIPLE_TASK | FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS, as headroid's launches
-_OPEN_URL_FLAGS = "0x18800000"
-
 _KEY_CODES = {
     KeyCode.HOME.value: 3,
     KeyCode.BACK.value: 4,
@@ -294,6 +291,8 @@ class HeadroidDriver(BaseDeviceDriver):
         self._device: Device | None = None
         self._display = None
         self._size: tuple[int, int] | None = None
+        # the package that opened the last link (open_url), so the agent can be told which app it is in
+        self.last_opened_package: str | None = None
 
     # --- connection ---
 
@@ -490,33 +489,16 @@ class HeadroidDriver(BaseDeviceDriver):
         return True
 
     async def open_url(self, url: str) -> bool:
-        """Opens the link on the hidden display (never display 0).
+        """Opens the link on the hidden display with the one app that handles it (headroid's app.openUrl:
+        own task, excluded from Recents, sound and vibration muted, stopped at the end of the session; never
+        display 0). That app's package is kept in last_opened_package.
 
-        ARTEMIS does not call this yet: its open_link is refused under headroid, because a raw `am start` leaves
-        the opened app unmuted and running after the session. It needs an app.openUrl RPC first.
-        """
-        display = self._require_display()
-        options = [
-            "--display",
-            str(display.id),
-            "-f",
-            _OPEN_URL_FLAGS,
-            "-a",
-            "android.intent.action.VIEW",
-        ]
-        options += ["-d", url]
-        why = _am_start_problem(
-            options, display.id
-        )  # the same launch rules as execute_shell's am start
-        if why:
-            raise PermissionError(f"open_url refused: {why}")
-        # one shell line for adb; the URL is a single single-quoted argument the device shell does not interpret
-        quoted = "'" + url.replace("'", "'\\''") + "'"
-        cmd = " ".join(["am", "start", *options[:-1], quoted])
-        out = await asyncio.to_thread(self._adb().run, "shell", cmd)
-        if "Error" in out:
-            logger.warning(f"open_url failed: {out.strip()}")
-            return False
+        Raises headroid's RpcError when the scheme is refused, no app handles the link, Android would ask which
+        app to use, or the app is open on a display this session does not own (such as the phone's own screen)."""
+        self.last_opened_package = None
+        package = await self._call("open_url", url)
+        self.last_opened_package = package
+        logger.info(f"open_url: {url} opened with {package} on the hidden display")
         return True
 
     # --- shell ---

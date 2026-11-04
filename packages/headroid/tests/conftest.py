@@ -43,6 +43,8 @@ class FakeServer:
                         resp = {"result": {"width": 1, "height": 1, "format": "png", "data": data}}
                     elif m == "display.create":
                         resp = {"result": {"displayId": 1, "width": 720, "height": 1600}}
+                    elif m == "app.openUrl":
+                        resp = {"result": {"package": "com.android.chrome"}}
                     elif m == "echo":
                         # a notification first, to exercise event stashing
                         note = {"jsonrpc": "2.0", "method": "event", "params": {"type": "x"}}

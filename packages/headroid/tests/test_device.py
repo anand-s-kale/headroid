@@ -62,6 +62,15 @@ def test_launch_mutes_by_default(fake_server):
     assert launches[1]["mute"] is False and launches[1]["muteNotifications"] is True
 
 
+def test_open_url_returns_the_package_and_mutes_by_default(fake_server):
+    d = _display(fake_server)
+    assert d.open_url("https://example.com/") == "com.android.chrome"
+    d.open_url("https://example.com/b", mute=False)
+    opens = [p for m, p in fake_server.calls if m == "app.openUrl"]
+    assert opens[0] == {"displayId": 1, "url": "https://example.com/", "mute": True}
+    assert opens[1]["mute"] is False
+
+
 def test_stop_and_clear_text(fake_server):
     d = _display(fake_server)
     d.stop("a.b")

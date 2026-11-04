@@ -17,17 +17,23 @@ import java.util.regex.Pattern;
 public final class AppPresence {
 
     private static final Pattern DISPLAY = Pattern.compile("^\\s*Display #(\\d+) ");
+    private static final Pattern DISPLAY_ANYWHERE = Pattern.compile("^\\s*Display #(\\d+) ", Pattern.MULTILINE);
 
     private AppPresence() {
         // not instantiable
     }
 
-    /** The displays that hold activities of {@code pkg}, from the activity history lines of the dump. */
-    public static Set<Integer> displaysWithActivities(String dump, String pkg) {
-        Set<Integer> result = new TreeSet<>();
-        if (dump == null) {
-            return result;
+    /**
+     * The displays that hold activities of {@code pkg}, from the activity history lines of the dump. Fails closed: a
+     * dump without any {@code Display #N} header (empty, an error, or a format this parser does not know) throws, since
+     * an empty set would read as "not open anywhere" and let a launch or a force-stop through.
+     */
+    public static Set<Integer> displaysWithActivities(String dump, String pkg) throws IOException {
+        if (dump == null || !DISPLAY_ANYWHERE.matcher(dump).find()) {
+            throw new IOException("dumpsys activity activities has no \"Display #\" section; cannot tell where " + pkg
+                    + " runs");
         }
+        Set<Integer> result = new TreeSet<>();
         Pattern hist = Pattern.compile("^\\s*\\* Hist\\s+#\\d+: ActivityRecord\\{\\S+ u\\d+ " + Pattern.quote(pkg) + "/");
         Integer display = null;
         for (String line : dump.split("\n")) {

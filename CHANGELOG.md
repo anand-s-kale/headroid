@@ -15,11 +15,24 @@ All notable changes are recorded here. Format: [Keep a Changelog](https://keepac
   `--headroid-app`. When a test body fails, the screenshot and UI tree go to `headroid-artifacts/<test id>-<hash>/`
   in the rootdir and into the report and JUnit XML properties. Without a phone the tests are skipped; several
   phones without `--headroid-serial`, or an unknown serial, is a usage error.
+- `open_link` works on the hidden display. The device server has a new `app.openUrl` RPC (`Display.open_url(url)`
+  in Python, returning the package): it resolves the one app that handles the link and launches it like
+  `app.launch` (own task, excluded from Recents, sound and vibration muted, stopped at the end of the session,
+  named by the HyperOS freeze message; notifications are not blocked). Refused: a link no app handles, one Android
+  would ask about ("Open with"), a URL without a scheme, `intent`, `android-app`, `file`, `content`, `data`, `javascript`, `about`, `tel`, `sms`, `smsto`, `mms`, `mmsto`, `mailto`, `voicemail`, `geo`, `market`
+  links, and any link while its app is open on a display the session does not own (the phone's own screen), since
+  the app could deliver it into that task. `HeadroidDriver.open_url` uses it instead of a raw `am start` and keeps
+  the package in `last_opened_package`; the `headroid-artemis` fork's `open_link` calls it again and names the app
+  (needs the next fork release). Unit-tested; not yet run on a phone.
 ### Changed
 - The settle rule (visible, fully on screen, same bounds on two reads) is now `headroid.device.Settle`, shared by
   `Display.wait_for` and locators. The allowed/refused key tables moved from the ARTEMIS driver to `headroid.keys`.
 - `Display.wait_for` raises `headroid.TimeoutError`, a subclass of the built-in `TimeoutError` (still caught by
   `except TimeoutError`).
+### Fixed
+- `app.launch` could bring a singleTask or singleInstance activity's existing task, possibly the owner's on display
+  0, instead of opening on the hidden display (`FLAG_ACTIVITY_MULTIPLE_TASK` does not apply to them). It now refuses
+  while the app has activities on a display the session does not own. Unit-tested; not yet run on a phone.
 
 ## [0.1.0a4] - 2026-11-04
 ### Added
