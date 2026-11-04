@@ -91,8 +91,8 @@ needs an explicit `packages:` list on current runners (its default `tools` packa
 - Open: in the third 60-min run the sample app on the hidden display ended between minute 12 and 13 with no kill
   line in the log (headroid's guard was not involved: the next process was started by another session). Possibly
   HyperOS power management; the fourth run logs the app pid and uid state every minute.
-- Not done: focus check / leak watch part of Task 1.8, governor (1.9), video (1.10),
-  smoothness measurement with the owner (step 6), screen-off long run (7b).
+- Not done: focus check / leak watch part of Task 1.8, governor (1.9), video (1.10). Screen-off operation fails
+  (checklist 7b, 2026-11-04): the hidden display sleeps with the phone.
 
 ## On-device checklist for the next session with the owner
 
@@ -136,8 +136,22 @@ never capture display 0, and keep screenshots of the hidden display only.
    1 s); with 5 s idle release, 1 connect and p99 9 ms. Owner: nothing felt laggy. Plan Task 1.12 done.
    Original plan:  `dumpsys gfxinfo <owner app> framestats` janky share and p95 with nothing / server idle / actions
    every 1 s / screenshots every 1 s / `ui.tree` every 1 s (plan Task 1.12), plus the owner's feel of keyboard lag.
-7. **Long runs**: sample `TimerActivity` on the hidden display over Wi-Fi for 60 min with music and reels, then 30–60
-   min screen off; record battery and temperature at start and end.
+7. **Long runs** — 2026-11-04, wireless adb, phone unplugged, one sample per minute (`TimerActivity` on the hidden
+   display; screenshot + `find(rid="timer_value")`, `mTopFocusedDisplayId`, battery, temperature, server RSS).
+   - **7a screen on — PASSED, 58 clean minutes** (07:58–08:57, owner using the phone). Same app pid throughout,
+     timer within 1 s of wall time at every sample, focus on display 0 in 58/58, screenshot and tree OK every minute,
+     battery 90 → 76 %, 35–37 °C, thermal status 0, server RSS 189 → 95 MB (falling). At 08:57 the phone left Wi-Fi
+     adb entirely (not even in `adb mdns services`); the host waited 60 s, the server tore the session down, and the
+     error was clear. Wireless debugging had to be re-enabled on the phone, so minutes 58–60 are missing.
+   - **7b screen off — FAILED the "keeps working" goal** (09:02–09:32, locked by `input keyevent 223`). Good: Wi-Fi
+     adb stayed up 30 min in Doze, app pid unchanged, screenshot OK every minute, focus on display 0 30/30, battery
+     74 → 71 %, 38 → 33 °C, clean teardown. Bad: while the phone is asleep the hidden display sleeps with it. The
+     timer text stopped updating (end screenshot shows 1089, the value from when the screen last turned off) and
+     `find` returned nothing (`tree_ms` ~5.2 s, i.e. no window). At 09:20 the screen woke for one sample and the
+     timer read 1081 / 1082 expected, so the process kept running; only drawing and the window tree stop. Likely
+     cause: the virtual display shares the default display group's power state, so its activities stop on sleep.
+     Fix to try: own display group (`VIRTUAL_DISPLAY_FLAG_OWN_DISPLAY_GROUP`, API 31+) and
+     `FLAG_ALWAYS_UNLOCKED` (API 33+), kept awake independently of display 0.
 
 ## Next work (in order)
 1. Run the checklist above with the owner; fix what fails.
