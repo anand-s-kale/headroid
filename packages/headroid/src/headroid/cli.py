@@ -1,6 +1,6 @@
 # Copyright 2026 Anand S Kale and the headroid contributors
 # SPDX-License-Identifier: Apache-2.0
-"""Command line: headroid devices|doctor|launch|info|screenshot|tree."""
+"""Command line: headroid devices|doctor|launch|mcp|info|screenshot|tree."""
 
 from __future__ import annotations
 
@@ -29,6 +29,8 @@ def _parser() -> argparse.ArgumentParser:
     s.add_argument("--wait", type=float, default=3.0, metavar="SECONDS")
     s.add_argument("--serial", default=None)
     s.add_argument("--jar", default=None)
+    s = sub.add_parser("mcp", help="start the ARTEMIS MCP server (manual mode) on a hidden display")
+    s.add_argument("--serial", default=None)
     for name in ("info", "screenshot", "tree"):
         s = sub.add_parser(name)
         s.add_argument("--serial", default=None)
@@ -56,12 +58,57 @@ def _doctor(args) -> int:
     return 0 if ok(checks) else 1
 
 
+def mcp_env(serial: str | None) -> dict[str, str]:
+    """Environment that puts the ARTEMIS fork into headroid manual mode."""
+    if serial is None:
+        try:
+            devices = [d for d in list_devices(os.environ.get("ADB", "adb")) if d["state"] == "device"]
+        except AdbError as e:
+            raise SystemExit(f"error: {e}") from e
+        if len(devices) != 1:
+            listing = "\n".join(f"  {d['serial']}	{d['model']}" for d in devices) or "  (none)"
+            raise SystemExit(
+                f"error: expected exactly one attached device, found {len(devices)}; "
+                f"pass --serial.\n{listing}"
+            )
+        serial = devices[0]["serial"]
+    return {
+        "ARTEMIS_DRIVER": "headroid",
+        "ARTEMIS_MCP_TOOLS": "mobile_observe,mobile_act,mobile_session_end",
+        "ARTEMIS_MCP_INLINE_SCREENSHOT": "1",
+        "ADB_DEVICE_SERIAL": serial,
+    }
+
+
+def _mcp(args) -> int:
+    # stdout belongs to the MCP protocol on stdio: print only to stderr here.
+    env = mcp_env(args.serial)
+    os.environ.update(env)  # must precede the import: the fork reads some of it at import time
+    try:
+        from mcp_server.server import main as serve
+    except ImportError as e:
+        hint = 'pip install "headroid[artemis]"'
+        if sys.version_info < (3, 12):
+            hint += " (needs Python 3.12 or newer; this is Python %d.%d)" % sys.version_info[:2]
+        print(f"error: the ARTEMIS MCP server is not installed ({e}).\nInstall it with: {hint}",
+              file=sys.stderr)
+        return 2
+    try:
+        serve()
+    except ValueError as e:
+        print(f"error: {e}", file=sys.stderr)
+        return 1
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     args = _parser().parse_args(argv)
     if args.cmd == "devices":
         return _devices()
     if args.cmd == "doctor":
         return _doctor(args)
+    if args.cmd == "mcp":
+        return _mcp(args)
     dev = Device.connect(serial=args.serial, jar=args.jar)
     try:
         if args.cmd == "info":
