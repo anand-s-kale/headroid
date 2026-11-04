@@ -1,0 +1,326 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>headroid explainer (landscape)</title>
+<style>
+  :root {
+    --bg: #f3ebdd; --bg2: #ebe0cc; --ink: #2b2219; --muted: #7b6a55;
+    --accent: #1f8a5c; --accent2: #b8612a; --bad: #c0392b; --warn: #d99a2b;
+    --card: #fffaf1; --line: #ddcdb3;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 1920px; height: 1080px; overflow: hidden; background: var(--bg); }
+  body { font-family: "Segoe UI", "Inter", system-ui, sans-serif; color: var(--ink); }
+  #stage { position: relative; width: 1920px; height: 1080px; overflow: hidden;
+    background: radial-gradient(1800px 900px at 50% -15%, #fbf6ec 0%, var(--bg) 55%, #eadfca 100%); }
+  .scene { position: absolute; inset: 0; opacity: 0; }
+  .abs { position: absolute; }
+  .center { left: 0; right: 0; text-align: center; }
+  h1 { font-size: 78px; line-height: 1.08; font-weight: 800; letter-spacing: -1.5px; }
+  h2 { font-size: 54px; line-height: 1.12; font-weight: 800; letter-spacing: -1px; }
+  .lead { font-size: 34px; color: var(--muted); line-height: 1.35; }
+  .tag { display: inline-block; padding: 10px 22px; border-radius: 999px; font-size: 26px; font-weight: 700;
+    letter-spacing: 1px; text-transform: uppercase; }
+  .tag.bad { background: rgba(192, 57, 43, .12); color: var(--bad); }
+  .tag.good { background: rgba(31, 138, 92, .13); color: var(--accent); }
+  .tag.blue { background: rgba(184, 97, 42, .13); color: var(--accent2); }
+
+  /* phone */
+  .phone { position: absolute; width: 300px; height: 610px; border-radius: 44px; background: #2b2118;
+    border: 3px solid #4a3a2c; box-shadow: 0 30px 70px rgba(80, 55, 25, .28); }
+  .phone .notch { position: absolute; top: 14px; left: 50%; width: 90px; height: 22px; margin-left: -45px;
+    background: #2b2118; border-radius: 12px; z-index: 5; border: 2px solid #3e3024; }
+  .screen { position: absolute; inset: 12px; border-radius: 34px; overflow: hidden; background: #fbf8f2; }
+  .appbar { height: 92px; padding: 46px 18px 0; font-size: 20px; font-weight: 700; color: #fff; }
+  .field { margin: 14px 18px 0; height: 52px; border-radius: 12px; background: #fff; border: 2px solid #e3d8c6;
+    font-size: 20px; color: #2b2219; padding: 12px 14px; font-family: Consolas, monospace; overflow: hidden; white-space: nowrap; }
+  .btn { margin: 18px 18px 0; height: 54px; border-radius: 12px; background: #34607e; color: #fff; font-weight: 700;
+    font-size: 21px; text-align: center; line-height: 54px; }
+  .tap { position: absolute; width: 46px; height: 46px; border-radius: 50%; border: 4px solid #d6457a;
+    background: rgba(214, 69, 122, .22); transform: translate(-50%, -50%); z-index: 8; }
+  .bubble { position: absolute; max-width: 200px; padding: 10px 14px; border-radius: 16px; font-size: 18px; line-height: 1.25; }
+  .bubble.me { right: 14px; background: #bfe8cf; color: #0f3a24; border-bottom-right-radius: 4px; }
+  .bubble.them { left: 14px; background: #fff; color: #2b2219; border-bottom-left-radius: 4px; border: 1px solid #e6dccb; }
+  .kb { position: absolute; left: 0; right: 0; bottom: 0; height: 170px; background: #e4dccd; }
+  .kb i { position: absolute; width: 22px; height: 32px; background: #fff; border-radius: 5px; }
+
+  .hidden-phone { border: 3px dashed var(--accent2); background: rgba(184, 97, 42, .06); box-shadow: 0 0 50px rgba(184, 97, 42, .22); }
+  .hidden-phone .screen { opacity: .97; }
+  .label { position: absolute; font-size: 26px; font-weight: 700; text-align: center; width: 340px; }
+
+  .row { position: absolute; left: 110px; right: 90px; font-size: 36px; font-weight: 600; display: flex; align-items: center; gap: 22px; }
+  .row .ic { flex: 0 0 56px; height: 56px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    font-size: 34px; font-weight: 900; }
+  .row .ic.bad { background: rgba(192, 57, 43, .13); color: var(--bad); }
+  .row .ic.good { background: rgba(31, 138, 92, .14); color: var(--accent); }
+
+  .code { position: absolute; left: 80px; right: 80px; background: var(--card); border: 2px solid var(--line); border-radius: 22px;
+    padding: 30px 34px; font-family: Consolas, "Cascadia Mono", monospace; font-size: 29px; line-height: 1.55; color: #3a2f24;
+    white-space: pre; box-shadow: 0 20px 50px rgba(80, 55, 25, .12); }
+  .code .k { color: #a8327a; } .code .s { color: #22774f; } .code .c { color: #9a8a73; } .code .f { color: #2c5a8c; }
+  .chat { position: absolute; left: 90px; width: 640px; padding: 26px 30px; border-radius: 26px; font-size: 34px; line-height: 1.3;
+    box-shadow: 0 14px 34px rgba(80, 55, 25, .10); }
+  .chat.user { background: var(--card); border: 2px solid var(--line); border-bottom-left-radius: 6px; }
+  .chat.agent { left: auto; right: 90px; background: #e3f2e8; border: 2px solid #bfdcc9; border-bottom-right-radius: 6px; color: #17603f; }
+  .pill { position: absolute; padding: 16px 30px; border-radius: 999px; background: var(--card); border: 2px solid var(--accent2);
+    font-family: Consolas, monospace; font-size: 30px; color: #3a2f24; }
+  .step { position: absolute; left: 470px; font-size: 30px; font-weight: 600; color: var(--muted); }
+  .step b { color: var(--accent); }
+  .logo { font-size: 120px; font-weight: 900; letter-spacing: -3px; }
+  .logo span { color: var(--accent); }
+  .ghost { color: var(--accent2); }
+  .progress { position: absolute; left: 0; bottom: 0; height: 8px; background: linear-gradient(90deg, var(--accent2), var(--accent)); }
+  .watermark { position: absolute; right: 36px; bottom: 26px; font-size: 22px; color: #a8957a; font-weight: 700; letter-spacing: 1px; }
+</style>
+</head>
+<body>
+<div id="stage">
+
+  <!-- 1. Hook -->
+  <section class="scene" id="s-hook">
+    <div class="abs center" style="top:250px"><span class="tag bad" id="hook-tag">Android app testing</span></div>
+    <h1 class="abs center" id="hook-1" style="top:340px; font-size:92px">Testing your app takes over your phone.</h1>
+    <p class="abs center lead" id="hook-2" style="top:520px; font-size:40px">You can't use it until the test is done.</p>
+    <div class="abs center" id="hook-3" style="top:640px; font-size:32px; color:var(--muted)">Sound familiar?</div>
+  </section>
+
+  <!-- 2. Before -->
+  <section class="scene" id="s-before">
+    <div class="abs" style="left:300px; top:80px"><span class="tag bad">Before</span></div>
+    <div class="phone" style="left:260px; top:200px">
+      <div class="notch"></div>
+      <div class="screen" id="b-screen">
+        <div class="appbar" style="background:#34607e">Your app (under test)</div>
+        <div class="field" id="b-f1"></div>
+        <div class="field" id="b-f2"></div>
+        <div class="btn">Sign in</div>
+        <div class="abs" id="b-lock" style="left:0;right:0;top:330px;text-align:center">
+          <div style="display:inline-block;background:#2b2219;color:#fff;padding:12px 16px;border-radius:12px;font-size:19px;font-weight:700">⚠ UI test running<br><span style="font-weight:400;color:#f2b8a6">don't touch the phone</span></div>
+        </div>
+        <div class="abs" id="b-toast" style="left:40px;right:40px;bottom:40px;background:#3a2f24;color:#fff;border-radius:22px;padding:12px;font-size:17px;text-align:center">🔊 Ding! Notification from your app</div>
+      </div>
+      <div class="tap" id="b-tap"></div>
+      <div class="abs" id="b-thumb" style="width:70px;height:70px;border-radius:50%;background:rgba(217,154,43,.35);border:3px solid var(--warn);z-index:9"></div>
+      <div class="abs" id="b-no" style="font-size:64px;font-weight:900;color:var(--bad);z-index:10">✕</div>
+    </div>
+    <h2 class="abs" style="left:760px; top:210px; font-size:56px">Testing on your own phone today</h2>
+    <div class="row" id="b-r1" style="left:760px; right:120px; top:350px; font-size:40px"><div class="ic bad">✕</div><div>Your phone is locked to the test</div></div>
+    <div class="row" id="b-r2" style="left:760px; right:120px; top:460px; font-size:40px"><div class="ic bad">✕</div><div>Keyboard and focus get stolen</div></div>
+    <div class="row" id="b-r3" style="left:760px; right:120px; top:570px; font-size:40px"><div class="ic bad">✕</div><div>Sounds, toasts and pop-ups</div></div>
+    <div class="row" id="b-r4" style="left:760px; right:120px; top:680px; font-size:40px"><div class="ic bad">✕</div><div>Or buy a 2nd phone / wait for an emulator</div></div>
+  </section>
+
+  <!-- 3. Question -->
+  <section class="scene" id="s-q">
+    <h2 class="abs center" id="q-1" style="top:330px; font-size:72px">What if the test ran on<br>a screen <span class="ghost">you never see</span>?</h2>
+    <div class="abs center" id="q-2" style="top:600px"><span class="logo" style="font-size:110px">head<span>roid</span></span></div>
+  </section>
+
+  <!-- 4. After -->
+  <section class="scene" id="s-after">
+    <div class="abs" style="left:440px; top:60px"><span class="tag good">With headroid</span></div>
+    <div class="label" style="left:100px; top:150px; color:var(--ink)">Your screen</div>
+    <div class="label ghost" style="left:600px; top:150px">Hidden screen</div>
+    <div class="phone" id="a-mine" style="left:120px; top:200px">
+      <div class="notch"></div>
+      <div class="screen" style="background:#eaf6f0">
+        <div class="appbar" style="background:#128c5a">Chat</div>
+        <div class="bubble them" id="a-c1" style="top:116px">Lunch at 1?</div>
+        <div class="bubble me" id="a-c2" style="top:176px"></div>
+        <div class="bubble them" id="a-c3" style="top:244px">👍</div>
+        <div class="kb" id="a-kb"></div>
+      </div>
+    </div>
+    <div class="phone hidden-phone" id="a-hidden" style="left:620px; top:200px">
+      <div class="screen">
+        <div class="appbar" style="background:#34607e">Your app (under test)</div>
+        <div class="field" id="a-f1"></div>
+        <div class="field" id="a-f2"></div>
+        <div class="btn" id="a-btn">Sign in</div>
+        <div class="abs" id="a-ok" style="left:0;right:0;top:380px;text-align:center;font-size:24px;font-weight:800;color:#0a8f57">✓ Signed in</div>
+      </div>
+      <div class="tap" id="a-tap"></div>
+    </div>
+    <div class="abs" id="a-link" style="left:430px; top:490px; width:180px; text-align:center; font-size:20px; color:var(--muted)">
+      <div style="height:4px;background:repeating-linear-gradient(90deg,var(--accent2) 0 14px,transparent 14px 26px);margin-bottom:12px"></div>
+      same phone,<br>two screens
+    </div>
+    <div class="row" id="a-r1" style="left:1060px; right:80px; top:300px; font-size:38px"><div class="ic good">✓</div><div>Your screen and keyboard stay yours</div></div>
+    <div class="row" id="a-r2" style="left:1060px; right:80px; top:410px; font-size:38px"><div class="ic good">✓</div><div>The app under test is muted</div></div>
+    <div class="row" id="a-r3" style="left:1060px; right:80px; top:520px; font-size:38px"><div class="ic good">✓</div><div>Pop-ups stay on the hidden screen</div></div>
+    <div class="row" id="a-r4" style="left:1060px; right:80px; top:630px; font-size:38px"><div class="ic good">✓</div><div>Cleans up after itself, even after a crash</div></div>
+  </section>
+
+  <!-- 5. Agents -->
+  <section class="scene" id="s-agent">
+    <div class="abs center" style="top:60px"><span class="tag blue">For AI agents</span></div>
+    <div class="chat user" id="g-1" style="left:120px; top:160px; width:620px">“Test the login flow of my app.”</div>
+    <div class="pill" id="g-2" style="left:300px; top:320px">headroid mcp</div>
+    <div class="phone hidden-phone" id="g-phone" style="left:220px; top:420px; transform:scale(.78); transform-origin: top left">
+      <div class="screen">
+        <div class="appbar" style="background:#34607e">Your app</div>
+        <div class="field" id="g-f1"></div>
+        <div class="field" id="g-f2"></div>
+        <div class="btn">Sign in</div>
+        <div class="abs" id="g-ok" style="left:0;right:0;top:380px;text-align:center;font-size:24px;font-weight:800;color:#0a8f57">✓ Signed in</div>
+      </div>
+      <div class="tap" id="g-tap"></div>
+    </div>
+    <div class="step" id="g-s1" style="left:880px; top:200px; font-size:36px"><b>✓</b> looks at the hidden screen</div>
+    <div class="step" id="g-s2" style="left:880px; top:270px; font-size:36px"><b>✓</b> taps “Login”</div>
+    <div class="step" id="g-s3" style="left:880px; top:340px; font-size:36px"><b>✓</b> types email + password</div>
+    <div class="step" id="g-s4" style="left:880px; top:410px; font-size:36px"><b>✓</b> signs in</div>
+    <div class="chat agent" id="g-3" style="left:880px; right:auto; top:520px; width:620px">“Done. Login works. ✓”</div>
+    <div class="abs" id="g-4" style="left:880px; top:720px; font-size:40px; font-weight:700">Claude or any MCP agent.<br><span style="color:var(--accent)">No extra API key.</span></div>
+    <div class="abs" id="g-5" style="left:880px; top:880px; font-size:28px; color:var(--muted); font-family:Consolas,monospace">claude mcp add headroid -- headroid mcp</div>
+  </section>
+
+  <!-- 6. Code -->
+  <section class="scene" id="s-code">
+    <div class="abs" style="left:120px; top:200px"><span class="tag blue">For your test suite</span></div>
+    <h2 class="abs" style="left:120px; top:290px; font-size:66px">Playwright-style<br>tests for Android</h2>
+    <div class="abs" id="c-pass" style="left:120px; top:560px; font-size:52px; font-weight:800; color:var(--accent)">1 passed ✓</div>
+    <div class="abs" id="c-sub" style="left:120px; top:650px; font-size:32px; color:var(--muted)">while you kept<br>using your phone</div>
+    <div class="code" id="c-code" style="left:760px; right:100px; top:220px"></div>
+  </section>
+
+  <!-- 7. Next + CTA -->
+  <section class="scene" id="s-cta">
+    <div class="abs center" id="n-1" style="top:70px"><span class="tag blue">What's next</span></div>
+    <div class="abs center" id="n-2" style="top:150px; font-size:40px; font-weight:600">More phones · Parallel tests · Reports &amp; video · Your feedback</div>
+    <div class="abs center" id="n-3" style="top:300px"><span class="logo" style="font-size:140px">head<span>roid</span></span></div>
+    <div class="abs center lead" id="n-4" style="top:500px; font-size:38px">Test Android apps on a hidden screen of your own phone, while you keep using it.</div>
+    <div class="abs center" id="n-5" style="top:620px"><span class="pill" style="position:static; display:inline-block">pip install --pre headroid</span></div>
+    <div class="abs center" id="n-6" style="top:740px; font-size:36px; font-weight:700; color:var(--accent2)">github.com/anand-s-kale/headroid</div>
+    <div class="abs center" id="n-7" style="top:830px; font-size:30px; color:var(--muted)">Open source · Alpha · Tell us which phone you tried it on</div>
+  </section>
+
+  <div class="progress" id="progress"></div>
+  <div class="watermark">headroid</div>
+</div>
+
+<script>
+const DURATION = 55;
+const SCENES = [
+  ["s-hook", 0, 4.2], ["s-before", 4.0, 15.4], ["s-q", 15.2, 19.4], ["s-after", 19.2, 32.4],
+  ["s-agent", 32.2, 43.4], ["s-code", 43.2, 49.4], ["s-cta", 49.2, 55.0],
+];
+const $ = (id) => document.getElementById(id);
+const clamp = (x, a = 0, b = 1) => Math.max(a, Math.min(b, x));
+const ease = (x) => { x = clamp(x); return x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2; };
+const prog = (t, a, b) => ease((t - a) / (b - a));
+const typed = (s, p) => s.slice(0, Math.round(s.length * clamp(p)));
+function show(el, t, a, dur = .5, dy = 30) {
+  const p = prog(t, a, a + dur);
+  el.style.opacity = p; el.style.transform = `translateY(${(1 - p) * dy}px)`;
+}
+function tapAt(el, t, pts) {
+  // pts: [[time, x, y], ...] taps visible for 0.45 s each
+  let on = null;
+  for (const [ts, x, y] of pts) if (t >= ts && t < ts + .45) on = [ts, x, y];
+  if (!on) { el.style.opacity = 0; return; }
+  const k = (t - on[0]) / .45;
+  el.style.left = on[1] + "px"; el.style.top = on[2] + "px";
+  el.style.opacity = 1 - k; el.style.transform = `translate(-50%,-50%) scale(${.6 + k})`;
+}
+
+function render(t) {
+  for (const [id, a, b] of SCENES) {
+    const el = $(id);
+    const o = Math.min(prog(t, a, a + .45), 1 - prog(t, b - .45, b));
+    el.style.opacity = (t >= a && t <= b) ? o : 0;
+  }
+  $("progress").style.width = (100 * clamp(t / DURATION)) + "%";
+
+  // hook
+  show($("hook-tag"), t, .1); show($("hook-1"), t, .35); show($("hook-2"), t, 1.4); show($("hook-3"), t, 2.4);
+
+  // before
+  const tb = t - 4;
+  $("b-f1").textContent = typed("test@example.com", prog(tb, .6, 2.2));
+  $("b-f2").textContent = "•".repeat(Math.round(8 * clamp((tb - 2.4) / 1.2)));
+  tapAt($("b-tap"), t, [[4.4, 150, 160], [6.3, 150, 226], [7.9, 150, 296], [9.4, 150, 160]]);
+  const th = prog(tb, 3.2, 4.0);
+  $("b-thumb").style.left = (240 - 90 * th) + "px"; $("b-thumb").style.top = (580 - 110 * th) + "px";
+  $("b-thumb").style.opacity = tb > 3 && tb < 6.4 ? 1 : 0;
+  $("b-no").style.left = "164px"; $("b-no").style.top = "456px";
+  $("b-no").style.opacity = tb > 4.1 && tb < 6.4 ? 1 : 0;
+  $("b-lock").style.opacity = prog(tb, .2, .7);
+  $("b-toast").style.opacity = tb > 6.6 && tb < 9.6 ? prog(tb, 6.6, 6.9) : 0;
+  show($("b-r1"), t, 5.2); show($("b-r2"), t, 6.6); show($("b-r3"), t, 8.0); show($("b-r4"), t, 9.6);
+
+  // question
+  show($("q-1"), t, 15.5, .6); show($("q-2"), t, 17.0, .6);
+  $("q-2").style.filter = `blur(${(1 - prog(t, 17.0, 17.8)) * 8}px)`;
+
+  // after
+  const ta = t - 19.2;
+  const slide = prog(ta, .3, 1.4);
+  $("a-hidden").style.transform = `translateX(${(1 - slide) * -300}px)`;
+  $("a-hidden").style.opacity = .25 + .75 * slide;
+  $("a-link").style.opacity = prog(ta, 1.2, 1.8);
+  $("a-c1").style.opacity = prog(ta, .4, .8);
+  $("a-c2").textContent = typed("Sure, see you there!", prog(ta, 2.0, 5.0));
+  $("a-c2").style.opacity = ta > 1.9 ? 1 : 0;
+  $("a-c3").style.opacity = prog(ta, 6.0, 6.4);
+  $("a-f1").textContent = typed("demo@headroid.dev", prog(ta, 2.2, 4.4));
+  $("a-f2").textContent = "•".repeat(Math.round(8 * clamp((ta - 4.8) / 1.0)));
+  tapAt($("a-tap"), t, [[19.2 + 1.9, 150, 160], [19.2 + 4.5, 150, 226], [19.2 + 6.3, 150, 296]]);
+  $("a-ok").style.opacity = prog(ta, 6.8, 7.2);
+  show($("a-r1"), t, 21.6); show($("a-r2"), t, 23.4); show($("a-r3"), t, 25.2); show($("a-r4"), t, 27.0);
+
+  // agent
+  const tg = t - 32.2;
+  show($("g-1"), t, 32.5); show($("g-2"), t, 33.6); show($("g-phone"), t, 34.0, .5, 0);
+  $("g-phone").style.transform = "scale(.78)";
+  $("g-f1").textContent = typed("demo@headroid.dev", prog(tg, 3.6, 5.0));
+  $("g-f2").textContent = "•".repeat(Math.round(8 * clamp((tg - 5.2) / .8)));
+  tapAt($("g-tap"), t, [[32.2 + 3.2, 150, 160], [32.2 + 5.0, 150, 226], [32.2 + 6.3, 150, 296]]);
+  $("g-ok").style.opacity = prog(tg, 6.7, 7.0);
+  show($("g-s1"), t, 34.8); show($("g-s2"), t, 35.6); show($("g-s3"), t, 36.8); show($("g-s4"), t, 38.4);
+  show($("g-3"), t, 39.0); show($("g-4"), t, 40.0); show($("g-5"), t, 40.8);
+
+  // code
+  const CODE = [
+    ['<span class="k">def</span> <span class="f">test_login</span>(headroid_page):', 0],
+    ['    page = headroid_page', 1],
+    ['    page.get_by_text(<span class="s">"Login"</span>).click()', 1],
+    ['    page.get_by_id(<span class="s">"email"</span>).fill(<span class="s">"me@app.dev"</span>)', 1],
+    ['    page.get_by_text(<span class="s">"Sign in"</span>).click()', 1],
+    ['    expect(page.get_by_text(<span class="s">"Welcome"</span>))', 1],
+    ['        .to_be_visible()', 1],
+  ];
+  const lines = Math.floor(clamp((t - 44.0) / 3.0) * CODE.length + .001);
+  $("c-code").innerHTML = '<span class="c"># pytest test_login.py</span>\n' + CODE.slice(0, lines).map((l) => l[0]).join("\n");
+  show($("c-code"), t, 43.5, .5, 0);
+  show($("c-pass"), t, 47.4); show($("c-sub"), t, 47.9);
+
+  // cta
+  show($("n-1"), t, 49.4); show($("n-2"), t, 49.8);
+  show($("n-3"), t, 51.0); show($("n-4"), t, 51.6); show($("n-5"), t, 52.4); show($("n-6"), t, 53.0); show($("n-7"), t, 53.5);
+}
+
+// keyboard keys (static decoration on the owner's chat phone)
+(function () {
+  const kb = document.getElementById("a-kb");
+  const rows = [10, 9, 7];
+  let html = "";
+  rows.forEach((n, r) => {
+    const w = 22, gap = 4.6, left = (276 - n * w - (n - 1) * gap) / 2;
+    for (let i = 0; i < n; i++) html += `<i style="left:${left + i * (w + gap)}px;top:${14 + r * 42}px"></i>`;
+  });
+  html += `<i style="left:60px;top:140px;width:156px;height:24px"></i>`;
+  kb.innerHTML = html;
+})();
+window.render = render;
+window.DURATION = DURATION;
+render(0);
+// live preview when opened in a browser (not while rendering)
+if (!location.search.includes("render")) {
+  const t0 = performance.now();
+  (function loop() { render(((performance.now() - t0) / 1000) % DURATION); requestAnimationFrame(loop); })();
+}
+</script>
+</body>
+</html>
