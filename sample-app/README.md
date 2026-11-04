@@ -11,7 +11,7 @@ Login: `demo@headroid.dev` / `headroid`
 
 | Activity | Resource-ids | Behaviour |
 |---|---|---|
-| `MainActivity` | `nav_login`, `nav_form`, `nav_list`, `nav_checkout`, `nav_effects`, `nav_crash`, `nav_secure`, `nav_timer` | One button per screen |
+| `MainActivity` | `nav_login`, `nav_form`, `nav_list`, `nav_checkout`, `nav_effects`, `nav_crash`, `nav_secure`, `nav_timer`, `nav_single_task` | One button per screen |
 | `LoginActivity` | `login_email`, `login_password`, `login_submit`, `login_error` | Valid credentials open `FormActivity`; otherwise `login_error` shows "Invalid email or password" |
 | `FormActivity` | `form_name`, `form_phone`, `form_notes`, `form_newsletter`, `form_plan` (`plan_free`, `plan_pro`), `form_submit`, `form_result` | Submit shows "Saved: <name>" |
 | `ListActivity` | `list_items`, `list_selected` | 200 items; tap shows "Selected: Item N" |
@@ -20,6 +20,7 @@ Login: `demo@headroid.dev` / `headroid`
 | `CrashActivity` | `crash_now`, `anr_now` | Throws `IllegalStateException("headroid sample crash")`; blocks the main thread for 20 s |
 | `SecureActivity` | `secure_text` | `FLAG_SECURE` set |
 | `TimerActivity` | `timer_value`, `timer_started_at` | Seconds since start, updated every second; logs every 10 s |
+| `SingleTaskActivity` | `single_task_title`, `single_task_new_intents` | `launchMode="singleTask"`, action `dev.headroid.sample.SINGLE_TASK`; shows "new intents: N" (count of `onNewIntent` calls); logs `single task created` / `single task new intent` |
 
 ## Build
 
