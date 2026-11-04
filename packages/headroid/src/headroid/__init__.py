@@ -4,6 +4,10 @@
 
 from .adb import Adb, AdbError
 from .device import Device, Display
+from .errors import TimeoutError
+from .expect import expect
+from .locator import Locator
+from .page import Page
 from .rpc import RpcClient, RpcError
 from .server import ServerProcess
 
@@ -13,8 +17,12 @@ __all__ = [
     "AdbError",
     "Device",
     "Display",
+    "Locator",
+    "Page",
     "RpcClient",
     "RpcError",
     "ServerProcess",
+    "TimeoutError",
     "__version__",
+    "expect",
 ]
