@@ -37,8 +37,8 @@ options; `headroid doctor` tells you which.
 
 ## Use with an AI agent (recommended: `headroid[artemis]`)
 
-> **Coming in 0.1.0a4.** The `artemis` extra and `headroid mcp` are built and unit-tested but not yet on PyPI;
-> today `pip install --pre headroid` does not include them.
+> New in 0.1.0a4. Verified on a POCO F6: a Claude Code session signed in to the sample app on the hidden display
+> by itself, while the owner's screen kept focus.
 
 Let Claude (or any MCP client) drive your app on the hidden display. The client does the thinking, so **no LLM API
 key is needed**.

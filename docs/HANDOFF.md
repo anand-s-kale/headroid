@@ -201,15 +201,15 @@ never capture display 0, and keep screenshots of the hidden display only.
      keeps the session alive on the phone; kill leftover host scripts by command line.
 
 ## AI agent mode: `headroid mcp` (2026-11-04, branch `claude/artemis-mcp`)
-Status: **built, unit-tested and passed on the POCO F6 (2026-11-04: `scripts/agent_e2e.py` twice, all 10 checks: launch, login, post-login form, focus on display 0 throughout, nothing left, `stay_on_while_plugged_in` unchanged); not published.**
+Status: **built, unit-tested and passed on the POCO F6 (2026-11-04: `scripts/agent_e2e.py` twice, all 10 checks: launch, login, post-login form, focus on display 0 throughout, nothing left, `stay_on_while_plugged_in` unchanged); published as 0.1.0a4 (headroid) and 0.1.0a1 (headroid-artemis, headroid-artemis-client).**
 
 Real Claude Code run (2026-11-04, `claude -p` with only the three headroid tools, plain request "sign in to dev.headroid.sample"):
 success in 15 turns / 67 s, reached the Form screen and described it, ended the session; focus on display 0 before and after,
 no server or display left. Claude's findings: (1) `manage_app` argument names are not discoverable from the tool description
 (it tried `start`/`open` and `package_name` before `launch` + `app_name`); (2) right after a screen change the element list
 showed every element at x=1000 (activity still sliding in) until a fresh observe; (3) the sample's password field text is
-readable in the element list (accessibility exposes it). Planned for 0.1.0a4 (Task 8), which needs
-the owner's go-ahead.
+readable in the element list (accessibility exposes it). The two rough edges (1)-(2) were fixed before the release (documented
+`mobile_act` args; reads settle on window roots for up to 2 s); (3) is in the README. Agent e2e then passed 3/3.
 - `pip install "headroid[artemis]"` (Python 3.12+) pulls the owner's ARTEMIS fork, distributed as `headroid-artemis` +
   `headroid-artemis-client`: https://github.com/anand-s-kale/artemis, branch `headroid-artemis` (upstream
   https://github.com/google/artemis). `headroid mcp [--serial S]` starts the fork's MCP server (`ARTEMIS_DRIVER=headroid`)
@@ -220,8 +220,8 @@ the owner's go-ahead.
   manage_app); ARTEMIS's keep-awake service is off; `execute_shell` allows only getprop, pm list packages,
   pm path, am start on the hidden display; Xiaomi/HyperOS needs Battery saver "No restrictions" or error `-32014`.
 - `headroid-artemis` and the unrelated PyPI `artemis` share the import name `artemis`: keep them in separate envs.
-- Still to do: on-device run with the owner (observe, act, session end; screen off), then publish the fork packages
-  and release 0.1.0a4, then drop the "coming in" notes from the READMEs.
+- Still to do: agent mode with the screen off; `open_link` via a headroid `app.openUrl` RPC; check singleTask
+  activities do not reuse a task on display 0; exercise `input.clearText` on a device.
 
 ## Next work (in order)
 1. Run the checklist above with the owner; fix what fails.

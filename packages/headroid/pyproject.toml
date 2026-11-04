@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "headroid"
-version = "0.1.0a3"
+version = "0.1.0a4"
 description = "Test Android apps on a hidden display of your own phone while you keep using it."
 readme = "README.md"
 requires-python = ">=3.11"
