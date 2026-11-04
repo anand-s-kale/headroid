@@ -189,11 +189,21 @@ def test_get_screen_data_maps_tree():
     assert data.ui_elements == [
         {
             "text": "Sign in",
-            "resource_id": "dev.headroid.sample:id/login",
+            "content-desc": "",
+            "accessibilityText": "",
+            "resource-id": "dev.headroid.sample:id/login",
             "class": "android.widget.Button",
-            "clickable": True,
-            "bounds": [32, 91, 688, 166],
-            "center": [360, 128],
+            "package": "dev.headroid.sample",
+            "bounds": "[32,91][688,166]",
+            "clickable": "true",
+            "long-clickable": "false",
+            "enabled": "false",
+            "focused": "false",
+            "focusable": "false",
+            "scrollable": "false",
+            "checkable": "false",
+            "checked": "false",
+            "selected": "false",
         }
     ]
     assert data.screenshot_bytes == PNG
@@ -202,31 +212,46 @@ def test_get_screen_data_maps_tree():
     assert data.platform == "android"
 
 
-def test_tree_to_elements_matches_artemis_xml_parser():
-    from artemis.drivers.android.hierarchy import parse_ui_hierarchy
+def test_tree_to_elements_feeds_artemis_observe_pipeline():
+    # The element list ARTEMIS shows the agent, and the indices click-by-number resolves, come from these
+    # functions; they read uiautomator-format elements (string bounds), as from ARTEMIS's own adb driver.
+    from artemis.mcp.actuators.adb import find_element_at_coords
+    from artemis.utils.ocr_xml_fusion import fuse_ocr_with_xml
+    from artemis.utils.visualization import format_minimal_list_with_elements
 
-    xml = (
-        '<hierarchy><node class="android.widget.FrameLayout" text="" resource-id=""'
-        ' clickable="false" bounds="[0,0][720,1600]">'
-        '<node class="android.widget.Button" text="Sign in"'
-        ' resource-id="dev.headroid.sample:id/login" clickable="true" bounds="[32,91][688,166]"/>'
-        '<node class="android.widget.ImageView" text="" content-desc="Logo" resource-id=""'
-        ' clickable="false" bounds="[10,10][10,50]"/>'
-        "</node></hierarchy>"
-    )
     nodes = [dict(TREE[0])]
     nodes[0]["children"] = TREE[0]["children"] + [
+        {
+            "cls": "android.widget.EditText",
+            "text": "",
+            "desc": "Search",
+            "rid": "dev.headroid.sample:id/q",
+            "bounds": [32, 200, 688, 260],
+            "clickable": True,
+            "focusable": True,
+            "focused": True,
+            "children": [],
+        },
         {
             "cls": "android.widget.ImageView",
             "text": None,
             "desc": "Logo",
             "rid": None,
-            "bounds": [10, 10, 10, 50],  # zero width: dropped, as by the XML parser
+            "bounds": [10, 10, 10, 50],  # zero width: dropped, as by uiautomator
             "clickable": False,
             "children": [],
-        }
+        },
     ]
-    assert tree_to_elements(nodes) == parse_ui_hierarchy(xml)
+    elements = tree_to_elements(nodes)
+    text, indexed, _labels = format_minimal_list_with_elements(
+        fuse_ocr_with_xml(elements, []), 720, 1600
+    )
+    assert text.splitlines() == [
+        "[1] Text: 'Sign in' | Bounds: [44,56][955,103]",
+        "[2] Text: 'Search' | Bounds: [44,125][955,162]",
+    ]
+    assert [e["center"] for e in indexed] == [[360, 128], [360, 230]]
+    assert find_element_at_coords(elements, 360, 230)["focused"] == "true"
 
 
 def test_tree_to_elements_uses_desc_and_skips_invisible_nodes():
@@ -241,7 +266,7 @@ def test_tree_to_elements_uses_desc_and_skips_invisible_nodes():
             "visible": False,
         },
     ]
-    assert [e["text"] for e in tree_to_elements(nodes)] == ["Settings"]
+    assert [e["content-desc"] for e in tree_to_elements(nodes)] == ["Settings"]
 
 
 def test_empty_display_observe():
@@ -316,19 +341,73 @@ def test_swipe_direction_uses_hidden_display_size():
 
 def test_press_key_accepts_names_and_numbers():
     driver, device, _ = _driver()
-    for key in ("enter", "KEYCODE_DEL", "123", 61, KeyCode.DELETE):
+    # "back", "enter", "delete" and "123" (MOVE_END) are the keys ARTEMIS itself sends.
+    for key in ("enter", "back", "delete", "KEYCODE_DEL", "123", 61, KeyCode.DELETE, "dpad_down", "menu"):
         run(driver.press_key(key))
-    assert device.calls == [("key", 66), ("key", 67), ("key", 123), ("key", 61), ("key", 67)]
+    assert device.calls == [
+        ("key", 66),
+        ("key", 4),
+        ("key", 67),
+        ("key", 67),
+        ("key", 123),
+        ("key", 61),
+        ("key", 67),
+        ("key", 20),
+        ("key", 82),
+    ]
+
+
+@pytest.mark.parametrize("code", [7, 16, 29, 54, 55, 56, 68, 77, 81, 62, 111, 112, 122])
+def test_press_key_allows_printable_and_editing_keys(code):
+    driver, device, _ = _driver()
+    run(driver.press_key(code))
+    assert device.calls == [("key", code)]
 
 
 @pytest.mark.parametrize(
-    "key", [KeyCode.HOME, KeyCode.APP_SWITCH, KeyCode.POWER, KeyCode.VOLUME_UP, "KEYCODE_HOME", 3]
+    "key",
+    [
+        KeyCode.HOME,
+        KeyCode.APP_SWITCH,
+        KeyCode.POWER,
+        KeyCode.VOLUME_UP,
+        "KEYCODE_HOME",
+        "home",
+        3,
+        # passed the old deny-list
+        5,  # CALL
+        6,  # ENDCALL
+        27,  # CAMERA
+        64,  # EXPLORER
+        65,  # ENVELOPE
+        79,  # HEADSETHOOK
+        84,  # SEARCH
+        85,  # MEDIA_PLAY_PAUSE
+        90,  # MEDIA_FAST_FORWARD
+        91,  # MUTE
+        126,  # MEDIA_PLAY
+        127,  # MEDIA_PAUSE
+        176,  # SETTINGS
+        204,  # LANGUAGE_SWITCH
+        207,  # CONTACTS
+        210,  # CALCULATOR
+        284,  # ALL_APPS
+        "KEYCODE_6",  # 6 is ENDCALL, not the digit
+    ],
 )
 def test_press_key_refuses_keys_that_act_beyond_the_hidden_display(key):
     driver, device, _ = _driver()
     with pytest.raises(PermissionError, match="hidden display"):
         run(driver.press_key(key))
     assert device.calls == []
+
+
+def test_press_key_refusal_names_the_key():
+    driver, _, _ = _driver()
+    with pytest.raises(PermissionError, match="KEYCODE_ENDCALL"):
+        run(driver.press_key(6))
+    with pytest.raises(PermissionError, match="KEYCODE_208"):
+        run(driver.press_key(208))
 
 
 def test_press_key_unknown_name():

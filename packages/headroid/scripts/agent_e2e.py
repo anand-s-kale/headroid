@@ -4,7 +4,8 @@
 
 Starts `headroid mcp --serial S` over stdio, then does what an AI agent would: launch the sample app,
 observe, log in by element index, observe the post-login screen, end the session. Checks the user's
-foreground (display 0) never changed and that nothing is left behind on the device.
+foreground (display 0) never changed, the phone's stay-awake setting is unchanged, and nothing is left
+behind on the device.
 
     python scripts/agent_e2e.py --serial emulator-5554 [--out agent-e2e-out]
 
@@ -54,6 +55,11 @@ def top_focused_display(adb: Adb) -> int | None:
     return int(m.group(1)) if m else None
 
 
+def stay_on_setting(adb: Adb) -> str:
+    """The phone's "stay awake while charging" setting (read only; headroid mcp must never change it)."""
+    return adb.shell("settings get global stay_on_while_plugged_in").strip()
+
+
 def leftovers(adb: Adb) -> tuple[bool, bool]:
     """(headroid virtual display present, device server process present)."""
     display = adb.shell(f"dumpsys display | grep -c '{VIRTUAL_DISPLAY}' || true").strip()
@@ -80,6 +86,7 @@ async def run(args: argparse.Namespace, adb: Adb, results: dict, checks: dict) -
         env=dict(os.environ),
     )
     focus: dict[str, int | None] = {}
+    stay_on = {"before": stay_on_setting(adb)}
     async with stdio_client(params) as (read, write), ClientSession(read, write) as session:
         await session.initialize()
 
@@ -152,6 +159,9 @@ async def run(args: argparse.Namespace, adb: Adb, results: dict, checks: dict) -
             checks["no_headroid_display_left"] = not display_left
             checks["no_server_process_left"] = not proc_left
             results["top_focused_display"] = focus
+            stay_on["after"] = stay_on_setting(adb)
+            results["stay_on_while_plugged_in"] = stay_on
+            checks["phone_settings_unchanged"] = stay_on["after"] == stay_on["before"]
             checks["focus_stayed_on_display_0"] = len(focus) == 4 and all(
                 v == 0 for v in focus.values()
             )
@@ -161,6 +171,7 @@ REQUIRED_CHECKS = {
     "tools_are_the_three", "launched", "hidden_display_seen_during_run", "home_observed",
     "post_login_observed", "session_ended",
     "no_headroid_display_left", "no_server_process_left", "focus_stayed_on_display_0",
+    "phone_settings_unchanged",
 }
 
 

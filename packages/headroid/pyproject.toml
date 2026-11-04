@@ -32,7 +32,7 @@ Changelog = "https://github.com/anand-s-kale/headroid/blob/main/CHANGELOG.md"
 
 [project.optional-dependencies]
 dev = ["pytest>=8", "ruff"]
-artemis = ["headroid-artemis>=0.1.0a1; python_version >= '3.12'"]
+artemis = ["headroid-artemis>=0.1.0a1,<0.2; python_version >= '3.12'"]
 
 [project.scripts]
 headroid = "headroid.cli:main"

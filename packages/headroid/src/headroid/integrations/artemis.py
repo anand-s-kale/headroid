@@ -64,39 +64,69 @@ _KEY_CODES = {
     "dpad_right": 22,
     "dpad_center": 23,
     "menu": 82,
-    "search": 84,
 }
 
-# Keys Android handles for the whole phone or on its main screen, whatever display the event names.
-_REFUSED_KEYS = {
-    3: "HOME",  # also closes system dialogs and wakes dreams on the main screen
+# The keys headroid sends: editing and navigation keys that act on the focused window of the hidden display.
+# Everything else is refused: many keys act on the whole phone or its main screen whatever display the event
+# names (HOME, POWER, volume, calls, media, camera, assistant, app-launch keys, Recents, settings, ...).
+_ALLOWED_KEYS = {
+    4: "BACK",
+    19: "DPAD_UP",
+    20: "DPAD_DOWN",
+    21: "DPAD_LEFT",
+    22: "DPAD_RIGHT",
+    23: "DPAD_CENTER",
+    61: "TAB",
+    62: "SPACE",
+    66: "ENTER",
+    67: "DEL",
+    82: "MENU",
+    111: "ESCAPE",
+    112: "FORWARD_DEL",
+    122: "MOVE_HOME",
+    123: "MOVE_END",
+}
+# Printable keys: 0-9, A-Z, comma, period, ` - = [ ] \ ; ' / @, plus.
+_PRINTABLE_KEYS = frozenset([*range(7, 17), *range(29, 57), *range(68, 78), 81])
+
+# Names of refused keys, for the error message.
+_REFUSED_KEY_NAMES = {
+    3: "HOME",
+    5: "CALL",
+    6: "ENDCALL",
     24: "VOLUME_UP",
     25: "VOLUME_DOWN",
     26: "POWER",
+    27: "CAMERA",
+    79: "HEADSETHOOK",
     83: "NOTIFICATION",
-    120: "SYSRQ",  # a screenshot of the main screen
+    84: "SEARCH",
+    85: "MEDIA_PLAY_PAUSE",
+    91: "MUTE",
+    120: "SYSRQ",
     164: "VOLUME_MUTE",
-    187: "APP_SWITCH",  # Recents opens on display 0
+    176: "SETTINGS",
+    187: "APP_SWITCH",
     219: "ASSIST",
-    220: "BRIGHTNESS_DOWN",
-    221: "BRIGHTNESS_UP",
     223: "SLEEP",
     224: "WAKEUP",
     231: "VOICE_ASSIST",
-    276: "SOFT_SLEEP",
-    280: "SYSTEM_NAVIGATION_UP",
-    281: "SYSTEM_NAVIGATION_DOWN",
-    282: "SYSTEM_NAVIGATION_LEFT",
-    283: "SYSTEM_NAVIGATION_RIGHT",
+    284: "ALL_APPS",
 }
 
 
-def tree_to_elements(nodes: list[dict]) -> list[dict]:
-    """Flattens a headroid UI tree into ARTEMIS's element dicts.
+def _key_allowed(code: int) -> bool:
+    return code in _ALLOWED_KEYS or code in _PRINTABLE_KEYS
 
-    Same keys, values and filter as ARTEMIS's XML parser (artemis/drivers/android/hierarchy.py): every node with
-    a non-zero area that has text, a content description, a resource id or is clickable, in document order. Nodes
-    headroid reports as not visible are skipped, as uiautomator leaves them out of its dump.
+
+def tree_to_elements(nodes: list[dict]) -> list[dict]:
+    """Flattens a headroid UI tree into ARTEMIS's uiautomator element dicts.
+
+    The format ARTEMIS's own adb driver hands its observe pipeline (artemis/clients/ui_automator_client.py):
+    string bounds "[x1,y1][x2,y2]", uiautomator attribute names and "true"/"false" flags, so the element list,
+    click-by-number and the focus check work as on the main screen. Kept: every node with a non-zero area that
+    has text, a content description, a resource id or is clickable, in document order. Nodes headroid reports as
+    not visible are skipped, as uiautomator leaves them out of its dump.
     """
     elements: list[dict] = []
 
@@ -110,6 +140,20 @@ def tree_to_elements(nodes: list[dict]) -> list[dict]:
     return elements
 
 
+# headroid tree flag -> uiautomator attribute
+_FLAG_ATTRIBUTES = {
+    "clickable": "clickable",
+    "longClickable": "long-clickable",
+    "enabled": "enabled",
+    "focused": "focused",
+    "focusable": "focusable",
+    "scrollable": "scrollable",
+    "checkable": "checkable",
+    "checked": "checked",
+    "selected": "selected",
+}
+
+
 def _append_element(elements: list[dict], node: dict) -> None:
     bounds = node.get("bounds")
     if not isinstance(bounds, (list, tuple)) or len(bounds) != 4:
@@ -117,20 +161,23 @@ def _append_element(elements: list[dict], node: dict) -> None:
     x1, y1, x2, y2 = (int(v) for v in bounds)
     if x1 >= x2 or y1 >= y2:
         return
-    text = node.get("text") or node.get("desc") or ""
+    text = node.get("text") or ""
+    desc = node.get("desc") or ""
     resource_id = node.get("rid") or ""
-    clickable = bool(node.get("clickable"))
-    if text or clickable or resource_id:
-        elements.append(
-            {
-                "text": text,
-                "resource_id": resource_id,
-                "class": node.get("cls") or "",
-                "clickable": clickable,
-                "bounds": [x1, y1, x2, y2],
-                "center": [(x1 + x2) // 2, (y1 + y2) // 2],
-            }
-        )
+    if not (text or desc or resource_id or node.get("clickable")):
+        return
+    element = {
+        "text": text,
+        "content-desc": desc,
+        "accessibilityText": desc,
+        "resource-id": resource_id,
+        "class": node.get("cls") or "",
+        "package": node.get("pkg") or "",
+        "bounds": f"[{x1},{y1}][{x2},{y2}]",
+    }
+    for flag, attribute in _FLAG_ATTRIBUTES.items():
+        element[attribute] = "true" if node.get(flag) else "false"
+    elements.append(element)
 
 
 @functools.lru_cache(maxsize=4)
@@ -395,9 +442,10 @@ class HeadroidDriver(BaseDeviceDriver):
 
     async def press_key(self, key: KeyCode | str | int) -> bool:
         code = _key_code(key)
-        if code in _REFUSED_KEYS:
+        if not _key_allowed(code):
+            name = _REFUSED_KEY_NAMES.get(code, str(code))
             raise PermissionError(
-                f"KEYCODE_{_REFUSED_KEYS[code]} acts on the whole phone or its main screen (display 0), not on "
+                f"KEYCODE_{name} acts on the whole phone or its main screen (display 0), not on "
                 "the hidden display; headroid does not send it. Use back, or manage_app to switch apps."
             )
         await self._call("key", code)
@@ -418,7 +466,11 @@ class HeadroidDriver(BaseDeviceDriver):
         return True
 
     async def open_url(self, url: str) -> bool:
-        """Opens the link on the hidden display (never display 0)."""
+        """Opens the link on the hidden display (never display 0).
+
+        ARTEMIS does not call this yet: its open_link is refused under headroid, because a raw `am start` leaves
+        the opened app unmuted and running after the session. It needs an app.openUrl RPC first.
+        """
         display = self._require_display()
         options = [
             "--display",

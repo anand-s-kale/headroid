@@ -60,11 +60,14 @@ Claude Desktop: add this to `claude_desktop_config.json` (with several devices a
 | Tool | What it does |
 |---|---|
 | `mobile_observe` | Screenshot plus a numbered element list of the hidden display (the screenshot is also returned inline, so Claude Desktop sees it) |
-| `mobile_act` | One action by element number: click, long_press, input_text, click_sequence, swipe, press_key, manage_app, wait_for_delay, wait_for_text, open_link, erase_one_char, focus_and_clear_text |
+| `mobile_act` | One action by element number: click, long_press, input_text, click_sequence, swipe, press_key, manage_app, wait_for_delay, wait_for_text, erase_one_char, focus_and_clear_text (`open_link` is not available on the hidden display yet: launch the app with `manage_app`) |
 | `mobile_session_end` | Closes the hidden display |
 
-The fork's other ARTEMIS tools are not exposed. Under headroid, HOME, APP_SWITCH, POWER and volume keys are refused,
-and `execute_shell` only allows `getprop`, `pm list packages`, `pm path` and `am start` on the hidden display.
+The fork's other ARTEMIS tools are not exposed. Under headroid, `press_key` only sends editing and navigation keys
+(back, enter, delete, forward delete, tab, space, escape, move home/end, D-pad, menu) and printable characters; HOME,
+APP_SWITCH, POWER, volume, call, media, camera and every other key are refused. `execute_shell` only allows
+`getprop`, `pm list packages`, `pm path` and `am start` on the hidden display. headroid mcp never changes the phone's
+settings and turns off ARTEMIS's keep-awake service, which would wake the phone's own screen.
 On Xiaomi/HyperOS set the app under test to Battery saver "No restrictions", or it freezes with the screen off
 (headroid then returns error `-32014` naming the fix).
 

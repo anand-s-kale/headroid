@@ -85,8 +85,9 @@ Lower-level calls (`tap`, `swipe`, `key`, `type`, `tree`, `find`) are also avail
 Coming in 0.1.0a4 (not on PyPI yet). `pip install --pre "headroid[artemis]"` (Python 3.12+) adds `headroid mcp
 [--serial S]`, an MCP server for Claude Code, Claude Desktop and other MCP clients. It exposes only
 `mobile_observe`, `mobile_act` and `mobile_session_end` on the hidden display and needs no LLM API key. Setup,
-the tool list and the limits (no HOME/APP_SWITCH/POWER/volume keys; Xiaomi needs Battery saver "No restrictions")
-are in the [main README](../../README.md#use-with-an-ai-agent-recommended-headroidartemis).
+the tool list and the limits (only editing, navigation and printable keys; no `open_link` yet; Xiaomi needs Battery
+saver "No restrictions") are in the
+[main README](https://github.com/anand-s-kale/headroid/blob/main/README.md#use-with-an-ai-agent-recommended-headroidartemis).
 Do not install it next to the unrelated PyPI package `artemis`: both use the import name `artemis`.
 
 ## Other commands

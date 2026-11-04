@@ -201,14 +201,16 @@ never capture display 0, and keep screenshots of the hidden display only.
      keeps the session alive on the phone; kill leftover host scripts by command line.
 
 ## AI agent mode: `headroid mcp` (2026-11-04, branch `claude/artemis-mcp`)
-Status: **built and unit-tested; not yet run on a phone; not published.** Released in 0.1.0a4 (Task 8), which needs
+Status: **built and unit-tested; not yet run on a phone; not published.** Planned for 0.1.0a4 (Task 8), which needs
 the owner's go-ahead.
 - `pip install "headroid[artemis]"` (Python 3.12+) pulls the owner's ARTEMIS fork, distributed as `headroid-artemis` +
   `headroid-artemis-client`: https://github.com/anand-s-kale/artemis, branch `headroid-artemis` (upstream
   https://github.com/google/artemis). `headroid mcp [--serial S]` starts the fork's MCP server (`ARTEMIS_DRIVER=headroid`)
   exposing only `mobile_observe`, `mobile_act` and `mobile_session_end` (`ARTEMIS_MCP_TOOLS`), with screenshots
   returned inline (`ARTEMIS_MCP_INLINE_SCREENSHOT=1`). No LLM key: the MCP client thinks.
-- Under headroid: HOME/APP_SWITCH/POWER/volume keys refused; `execute_shell` allows only getprop, pm list packages,
+- Under headroid: `press_key` is an allow-list (editing/navigation keys and printable characters; HOME, APP_SWITCH,
+  POWER, volume, call, media, camera, ... refused); `open_link` refused until headroid has an `app.openUrl` RPC (use
+  manage_app); ARTEMIS's keep-awake service is off; `execute_shell` allows only getprop, pm list packages,
   pm path, am start on the hidden display; Xiaomi/HyperOS needs Battery saver "No restrictions" or error `-32014`.
 - `headroid-artemis` and the unrelated PyPI `artemis` share the import name `artemis`: keep them in separate envs.
 - Still to do: on-device run with the owner (observe, act, session end; screen off), then publish the fork packages

@@ -76,6 +76,10 @@ def mcp_env(serial: str | None) -> dict[str, str]:
         "ARTEMIS_DRIVER": "headroid",
         "ARTEMIS_MCP_TOOLS": "mobile_observe,mobile_act,mobile_session_end",
         "ARTEMIS_MCP_INLINE_SCREENSHOT": "1",
+        # ARTEMIS's awake service would set "stay on while plugged in" and wake the phone's own screen.
+        "ARTEMIS_KEEP_DEVICE_AWAKE": "0",
+        # ARTEMIS prefers ARTEMIS_DEVICE_ID over ADB_DEVICE_SERIAL: set both, so neither can name another phone.
+        "ARTEMIS_DEVICE_ID": serial,
         "ADB_DEVICE_SERIAL": serial,
     }
 
@@ -89,10 +93,22 @@ def _mcp(args) -> int:
     except ImportError as e:
         hint = 'pip install "headroid[artemis]"'
         if sys.version_info < (3, 12):
-            hint += " (needs Python 3.12 or newer; this is Python %d.%d)" % sys.version_info[:2]
+            hint += f" (needs Python 3.12 or newer; this is Python {sys.version_info[0]}.{sys.version_info[1]})"
         print(f"error: the ARTEMIS MCP server is not installed ({e}).\nInstall it with: {hint}",
               file=sys.stderr)
         return 2
+    # Importing ARTEMIS loads .env files, and a project's .env may override the environment. Put the values
+    # back; ARTEMIS_MCP_INLINE_SCREENSHOT is read during the import itself, so a change to it cannot be undone.
+    changed = sorted(k for k, v in env.items() if os.environ.get(k) != v)
+    if "ARTEMIS_MCP_INLINE_SCREENSHOT" in changed:
+        print("error: a .env file loaded by ARTEMIS changed ARTEMIS_MCP_INLINE_SCREENSHOT, which headroid mcp"
+              " needs set to 1; remove it from the .env in the current directory or in ARTEMIS's config"
+              " directory.", file=sys.stderr)
+        return 1
+    os.environ.update(env)
+    if changed:
+        print(f"headroid mcp: a .env file changed {', '.join(changed)}; restored headroid's values",
+              file=sys.stderr)
     try:
         serve()
     except ValueError as e:
