@@ -150,8 +150,15 @@ never capture display 0, and keep screenshots of the hidden display only.
      `find` returned nothing (`tree_ms` ~5.2 s, i.e. no window). At 09:20 the screen woke for one sample and the
      timer read 1081 / 1082 expected, so the process kept running; only drawing and the window tree stop. Likely
      cause: the virtual display shares the default display group's power state, so its activities stop on sleep.
-     Fix to try: own display group (`VIRTUAL_DISPLAY_FLAG_OWN_DISPLAY_GROUP`, API 31+) and
-     `FLAG_ALWAYS_UNLOCKED` (API 33+), kept awake independently of display 0.
+     Probe 2026-11-04 (paused by the owner, resume here): the display already has `OWN_DISPLAY_GROUP` and
+     `ALWAYS_UNLOCKED` and lands in its own group (`displayGroupId 1`, power group 1). 12 s after `KEYCODE_SLEEP`:
+     group 0 wakefulness 3 (dozing), group 1 wakefulness 1 (awake), virtual display `state ON`, TimerActivity
+     RESUMED, `find` returned live timer text. So the hidden group sleeps later, most likely on its own
+     user-activity timeout (nothing ever pokes group 1). Next: rerun `sleep_watch` (state every 10 s for ~3 min
+     locked) to time it; candidate fix is a server ticker calling `IPowerManager.userActivity(hiddenDisplayId, ...)`
+     (already wrapped in `wrappers/PowerManager`) every few seconds per hidden display, which stays inside group 1.
+     Test-harness note: on Windows, stopping a background bash task can leave its `python.exe` child running, which
+     keeps the session alive on the phone; kill leftover host scripts by command line.
 
 ## Next work (in order)
 1. Run the checklist above with the owner; fix what fails.
