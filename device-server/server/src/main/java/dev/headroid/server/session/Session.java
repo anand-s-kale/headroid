@@ -5,6 +5,7 @@ package dev.headroid.server.session;
 import dev.headroid.server.apps.AppLauncher;
 import dev.headroid.server.apps.AppMuter;
 import dev.headroid.server.apps.AppPresence;
+import dev.headroid.server.apps.HyperOsFreezer;
 import dev.headroid.server.display.DisplayFlags;
 import dev.headroid.server.display.DisplayRegistry;
 import dev.headroid.server.display.HiddenDisplay;
@@ -158,7 +159,15 @@ public final class Session {
             Map<String, Object> result = new LinkedHashMap<>();
             result.put("displayId", displayId);
             // the nodes read their children through the connection, so build the whole tree inside the lease
-            result.put("nodes", uiAutomation.lease(() -> TreeBuilder.build(uiAutomation.windowRootViews(displayId), TREE_MAX_DEPTH)));
+            List<Map<String, Object>> nodes = uiAutomation.lease(() -> TreeBuilder.build(uiAutomation.windowRootViews(displayId), TREE_MAX_DEPTH));
+            if (nodes.isEmpty()) {
+                // an empty tree with an app launched: on HyperOS the app may be frozen, say so instead of "nothing here"
+                String frozen = HyperOsFreezer.frozenPackage(new ArrayList<>(launchedPackages));
+                if (frozen != null) {
+                    throw new RpcException(RpcException.APP_FROZEN, HyperOsFreezer.frozenMessage(frozen));
+                }
+            }
+            result.put("nodes", nodes);
             return result;
         });
     }

@@ -140,7 +140,8 @@ def run_doctor(
             "manufacturer",
             maker,
             "Developer options: enable 'USB debugging (Security settings)' for input "
-            "and 'Install via USB' for installs",
+            "and 'Install via USB' for installs; to test with the screen off, set the app's "
+            "Settings > Apps > <app> > Battery saver to 'No restrictions' (HyperOS freezes it otherwise)",
         )
 
     # 5. jar

@@ -219,6 +219,8 @@ def test_doctor_all_pass_with_xiaomi_warn(monkeypatch, fake_server, jar_file):
     checks = doctor.run_doctor("ABC123", jar_file, connect=_connect_factory(fake_server))
     st = _status(checks)
     assert st["manufacturer"] == "WARN"
+    # HyperOS freezes the app under test once the screen is off unless its battery saver is "No restrictions"
+    assert "No restrictions" in next(c for c in checks if c.name == "manufacturer").fix
     assert st["hidden display screenshot"] == "PASS" and st["server.info"] == "PASS"
     assert doctor.ok(checks)
     assert "display.release" in [m for m, _ in fake_server.calls]

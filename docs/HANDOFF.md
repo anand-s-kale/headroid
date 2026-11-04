@@ -178,6 +178,10 @@ never capture display 0, and keep screenshots of the hidden display only.
      `persist.sys.gz.monkey` switch is not settable from shell. Next: check whether the owner-set battery mode
      "No restrictions" for the app exempts it; otherwise detect it (app pid in `dumpsys greezer` "Frozen
      processes") and fail with a clear error, or thaw on demand before each action.
+     **Workaround confirmed:** with Settings > Apps > headroid sample > Battery saver > "No restrictions", 2/2 locked
+     runs passed (90 s, every read OK; logcat `GreezeManager: triggerL ignore uid = 10814`). Shipped: `ui.tree`
+     returns `-32014 APP_FROZEN` with that instruction when the tree is empty and a launched app's pid is in
+     Greeze's frozen list (`apps/HyperOsFreezer`), and doctor's Xiaomi warning names the setting.
    - **Leftover-process theory — disproved** (2026-11-04): a fresh locked session on a sample process left by a
      killed session passed 2 min. While testing it, found a real isolation bug instead: every session left the
      app's task in the owner's **Recents** (13 entries on the POCO F6; the server destroys the activities on

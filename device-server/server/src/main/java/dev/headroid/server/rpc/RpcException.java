@@ -14,6 +14,7 @@ public class RpcException extends RuntimeException {
     public static final int NO_FRAME = -32011;
     public static final int UIA_UNAVAILABLE = -32012;
     public static final int PAUSED = -32013;
+    public static final int APP_FROZEN = -32014;
 
     private final int code;
 
