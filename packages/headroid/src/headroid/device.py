@@ -53,6 +53,11 @@ class Display:
             muteNotifications=mute_notifications,
         )
 
+    def stop(self, package: str) -> dict:
+        """Force-stops the app unless someone else uses it (it ran before headroid launched it, or it has
+        activities on a display this session does not own). Returns {"stopped": bool} plus "reason" when not."""
+        return self._c.call("app.stop", package=package)
+
     def tap(self, x: int, y: int) -> None:
         self._c.call("input.tap", displayId=self.id, x=x, y=y)
 
@@ -69,6 +74,10 @@ class Display:
 
     def type(self, text: str) -> None:
         self._c.call("input.text", displayId=self.id, text=text)
+
+    def clear_text(self) -> None:
+        """Empties the focused editable field (RpcError -32010 when no field has focus)."""
+        self._c.call("input.clearText", displayId=self.id)
 
     def screenshot(self, path: str | None = None, format: str = "png") -> bytes:
         res = self._c.call("display.screenshot", displayId=self.id, format=format)

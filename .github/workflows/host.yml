@@ -31,3 +31,29 @@ jobs:
       - run: pip install -e ".[dev]"
       - run: python -m ruff check
       - run: python -m pytest -q
+
+  artemis-driver:
+    # HeadroidDriver against the headroid-artemis fork (needs Python 3.12+). No phone: fake Device/Display.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: anand-s-kale/artemis
+          ref: headroid-artemis
+          path: artemis-fork
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.22.3"
+          cache: npm
+          cache-dependency-path: artemis-fork/apps/showcase_ui/package-lock.json
+      # the fork's setup.py refuses to install without its built Showcase UI
+      - run: |
+          npm ci --prefix artemis-fork/apps/showcase_ui
+          npm run build --prefix artemis-fork/apps/showcase_ui
+      - run: pip install -e artemis-fork/packages/artemis-client -e artemis-fork -e "packages/headroid[dev]"
+      - working-directory: packages/headroid
+        run: python -m pytest -q tests/test_artemis_driver.py

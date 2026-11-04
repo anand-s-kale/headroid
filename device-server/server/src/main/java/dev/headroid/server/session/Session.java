@@ -146,12 +146,20 @@ public final class Session {
             String method = "keys";
             if (!new InputInjector(displayId).typeWithKeys(text)) {
                 uiAutomation.lease(() -> {
-                    uiAutomation.appendToFocused(displayId, text);
+                    uiAutomation.setFocusedText(displayId, text, false);
                     return null;
                 });
                 method = "setText";
             }
             return Collections.singletonMap("method", method);
+        });
+        d.register("input.clearText", p -> {
+            int displayId = displays.require(p.getInt("displayId")).id();
+            uiAutomation.lease(() -> {
+                uiAutomation.setFocusedText(displayId, "", true);
+                return null;
+            });
+            return null;
         });
 
         d.register("ui.tree", p -> {

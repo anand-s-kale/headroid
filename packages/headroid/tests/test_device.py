@@ -60,3 +60,11 @@ def test_launch_mutes_by_default(fake_server):
     launches = [p for m, p in fake_server.calls if m == "app.launch"]
     assert launches[0]["mute"] is True and launches[0]["muteNotifications"] is False
     assert launches[1]["mute"] is False and launches[1]["muteNotifications"] is True
+
+
+def test_stop_and_clear_text(fake_server):
+    d = _display(fake_server)
+    d.stop("a.b")
+    d.clear_text()
+    assert ("app.stop", {"package": "a.b"}) in fake_server.calls
+    assert ("input.clearText", {"displayId": 1}) in fake_server.calls

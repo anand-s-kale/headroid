@@ -190,9 +190,12 @@ public final class UiAutomationHost {
         return views;
     }
 
-    /** Appends {@code text} to the focused editable node on {@code displayId} with ACTION_SET_TEXT. */
+    /**
+     * Appends {@code text} to the focused editable node on {@code displayId} with ACTION_SET_TEXT, or with
+     * {@code replace} sets it to {@code text} (an empty {@code text} clears the field).
+     */
     @TargetApi(30) // connect() refuses older releases
-    public void appendToFocused(int displayId, String text) {
+    public void setFocusedText(int displayId, String text, boolean replace) {
         AccessibilityNodeInfo focused = null;
         for (AccessibilityNodeInfo root : windowRoots(displayId)) {
             if (root != null) {
@@ -206,8 +209,7 @@ public final class UiAutomationHost {
         if (focused == null) {
             throw new RpcException(RpcException.NO_FOCUSED_EDITABLE, "no focused editable field on display " + displayId);
         }
-        CharSequence current = focused.isShowingHintText() ? null : focused.getText();
-        String value = (current == null ? "" : current.toString()) + text;
+        String value = FocusedText.value(focused.getText(), focused.isShowingHintText(), text, replace);
         Bundle args = new Bundle();
         args.putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, value);
         if (!focused.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, args)) {
