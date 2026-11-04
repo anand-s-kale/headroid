@@ -30,6 +30,8 @@ from artemis.drivers.base import BaseDeviceDriver, KeyCode, ScreenData, SwipeDir
 
 from ..adb import Adb, AdbError
 from ..device import Device, bounds_on_screen
+from ..keys import REFUSED_KEY_NAMES as _REFUSED_KEY_NAMES
+from ..keys import key_allowed as _key_allowed
 from ..rpc import RpcError
 
 logger = logging.getLogger(__name__)
@@ -70,57 +72,7 @@ _KEY_CODES = {
     "menu": 82,
 }
 
-# The keys headroid sends: editing and navigation keys that act on the focused window of the hidden display.
-# Everything else is refused: many keys act on the whole phone or its main screen whatever display the event
-# names (HOME, POWER, volume, calls, media, camera, assistant, app-launch keys, Recents, settings, ...).
-_ALLOWED_KEYS = {
-    4: "BACK",
-    19: "DPAD_UP",
-    20: "DPAD_DOWN",
-    21: "DPAD_LEFT",
-    22: "DPAD_RIGHT",
-    23: "DPAD_CENTER",
-    61: "TAB",
-    62: "SPACE",
-    66: "ENTER",
-    67: "DEL",
-    82: "MENU",
-    111: "ESCAPE",
-    112: "FORWARD_DEL",
-    122: "MOVE_HOME",
-    123: "MOVE_END",
-}
-# Printable keys: 0-9, A-Z, comma, period, ` - = [ ] \ ; ' / @, plus.
-_PRINTABLE_KEYS = frozenset([*range(7, 17), *range(29, 57), *range(68, 78), 81])
-
-# Names of refused keys, for the error message.
-_REFUSED_KEY_NAMES = {
-    3: "HOME",
-    5: "CALL",
-    6: "ENDCALL",
-    24: "VOLUME_UP",
-    25: "VOLUME_DOWN",
-    26: "POWER",
-    27: "CAMERA",
-    79: "HEADSETHOOK",
-    83: "NOTIFICATION",
-    84: "SEARCH",
-    85: "MEDIA_PLAY_PAUSE",
-    91: "MUTE",
-    120: "SYSRQ",
-    164: "VOLUME_MUTE",
-    176: "SETTINGS",
-    187: "APP_SWITCH",
-    219: "ASSIST",
-    223: "SLEEP",
-    224: "WAKEUP",
-    231: "VOICE_ASSIST",
-    284: "ALL_APPS",
-}
-
-
-def _key_allowed(code: int) -> bool:
-    return code in _ALLOWED_KEYS or code in _PRINTABLE_KEYS
+# Which keys are sent (editing, navigation, printable) and which are refused: headroid.keys.
 
 
 def tree_to_elements(nodes: list[dict]) -> list[dict]:

@@ -8,18 +8,52 @@ import base64
 import os
 import time
 from collections.abc import Callable
-from typing import Self
+from typing import TYPE_CHECKING, Self
 
 from .adb import Adb
+from .errors import TimeoutError
 from .jar import resolve_jar
 from .rpc import RpcClient, RpcError
 from .server import ServerProcess
+
+if TYPE_CHECKING:
+    from .page import Page
 
 
 def bounds_on_screen(bounds: list[int], width: int, height: int) -> bool:
     """True when a non-empty [left, top, right, bottom] box lies fully inside a width x height display."""
     left, top, right, bottom = bounds
     return 0 <= left < right <= width and 0 <= top < bottom <= height
+
+
+class Settle:
+    """The settle rule shared by Display.wait_for and Locator actions: a node is ready once it is visible,
+    fully on a width x height display and at the same bounds on two consecutive reads.
+
+    During an activity transition the tree reports the incoming window's nodes at their animated
+    position (shifted by a display width for ~0.8 s), so acting on the first sighting misses.
+    """
+
+    def __init__(self, width: int, height: int):
+        self.width = width
+        self.height = height
+        self._last: list[int] | None = None
+
+    def ready(self, node: dict) -> bool:
+        """True when the node is visible and on screen, ignoring stability."""
+        return bool(node.get("visible", True)) and bounds_on_screen(
+            node["bounds"], self.width, self.height
+        )
+
+    def observe(self, node: dict | None) -> bool:
+        """Feeds one read (None when the node was not found); True when the node has settled."""
+        if node is not None and self.ready(node):
+            if self._last is not None and node["bounds"] == self._last:
+                return True
+            self._last = node["bounds"]
+        else:
+            self._last = None
+        return False
 
 
 class Display:
@@ -124,9 +158,6 @@ class Display:
 
         return walk(self.tree())
 
-    def _on_screen(self, node: dict) -> bool:
-        return bounds_on_screen(node["bounds"], self.info["width"], self.info["height"])
-
     def wait_for(
         self,
         text: str | None = None,
@@ -134,21 +165,14 @@ class Display:
         desc: str | None = None,
         timeout: float = 10.0,
     ) -> dict:
-        """Waits until the node is visible, fully on the display and at the same bounds on two reads.
-
-        During an activity transition the tree reports the incoming window's nodes at their animated
-        position (shifted by a display width for ~0.8 s), so acting on the first sighting misses.
-        """
+        """Waits until the node is visible, fully on the display and at the same bounds on two reads
+        (see Settle)."""
         deadline = self._clock() + timeout
-        last = None
+        settle = Settle(self.info["width"], self.info["height"])
         while self._clock() < deadline:
             node = self.find(text=text, rid=rid, desc=desc)
-            if node is not None and node.get("visible", True) and self._on_screen(node):
-                if last is not None and node["bounds"] == last:
-                    return node
-                last = node["bounds"]
-            else:
-                last = None
+            if settle.observe(node):
+                return node
             self._sleep(0.2)
         criteria = {k: v for k, v in (("text", text), ("rid", rid), ("desc", desc)) if v is not None}
         raise TimeoutError(f"not found on screen and settled within {timeout}s: {criteria}")
@@ -202,6 +226,29 @@ class Device:
         d = Display(self.client, res)
         self.displays.append(d)
         return d
+
+    def new_page(
+        self, app: str, *, width: int = 720, height: int = 1600, dpi: int = 320, mute: bool = True
+    ) -> Page:
+        """Creates a hidden display, launches the app on it and returns a Page for it."""
+        from .page import Page
+
+        d = self.create_display(width=width, height=height, dpi=dpi)
+        try:
+            d.launch(app, mute=mute)
+        except BaseException:
+            self._forget(d)
+            raise
+        return Page(d, app, device=self)
+
+    def _forget(self, display: Display) -> None:
+        """Releases one display and drops it from this device's list (best effort)."""
+        if display in self.displays:
+            self.displays.remove(display)
+        try:
+            display.release()
+        except (OSError, RpcError):
+            pass
 
     def close(self) -> None:
         for d in self.displays:

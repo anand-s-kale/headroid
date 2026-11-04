@@ -3,6 +3,23 @@
 All notable changes are recorded here. Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
+### Added
+- Playwright-style sync API: `Device.new_page(app)` returns a `Page` (one hidden display, one app) with
+  `get_by_text`, `get_by_id` (resource id or React Native `testID`), `get_by_desc`, `locator`, `press`,
+  `screenshot`, `wait_for_idle` and `close`. `Locator` actions (`click`, `fill`, `text`) auto-wait for the element
+  to be visible, on screen and settled; timeouts raise `headroid.TimeoutError` naming the locator and the closest
+  texts on screen. `expect(locator)` adds `to_be_visible`, `to_be_hidden`, `to_have_text`, `to_contain_text` and
+  `to_have_count`, retrying until the timeout. Unit-tested with fakes; not yet run on a phone.
+- pytest plugin (entry point `headroid`, pytest 7+, extra `headroid[test]`): `headroid_device` and
+  `headroid_page` fixtures, `@pytest.mark.headroid("pkg")` / `headroid(app="pkg")`, `--headroid-serial` and
+  `--headroid-app`. When a test body fails, the screenshot and UI tree go to `headroid-artifacts/<test id>-<hash>/`
+  in the rootdir and into the report and JUnit XML properties. Without a phone the tests are skipped; several
+  phones without `--headroid-serial`, or an unknown serial, is a usage error.
+### Changed
+- The settle rule (visible, fully on screen, same bounds on two reads) is now `headroid.device.Settle`, shared by
+  `Display.wait_for` and locators. The allowed/refused key tables moved from the ARTEMIS driver to `headroid.keys`.
+- `Display.wait_for` raises `headroid.TimeoutError`, a subclass of the built-in `TimeoutError` (still caught by
+  `except TimeoutError`).
 
 ## [0.1.0a4] - 2026-11-04
 ### Added
