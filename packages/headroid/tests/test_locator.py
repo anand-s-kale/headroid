@@ -63,19 +63,23 @@ def test_get_by_id_full_and_short_and_desc():
     assert page.locator(text="Sign in", rid="login_email").count() == 0
 
 
-def test_get_by_text_not_exact_is_case_insensitive_substring():
+def test_get_by_text_defaults_to_case_insensitive_substring_like_playwright():
+    # Android often reports button labels in capitals ("LOGIN" for a "Login" button), so the default must not be
+    # case-sensitive; exact=True matches the whole text, case-sensitively
     page, _ = page_with(root(SIGN_IN, SIGN_UP))
-    assert page.get_by_text("sign", exact=False).count() == 2
-    assert page.get_by_text("sign").count() == 0
+    assert page.get_by_text("sign").count() == 2
+    assert page.get_by_text("sign", exact=True).count() == 0
+    assert page.get_by_text("Sign in", exact=True).count() == 1
+    assert repr(page.get_by_text("Sign in", exact=True)) == "get_by_text('Sign in', exact=True)"
 
 
 def test_nth_first_last_and_text():
     page, _ = page_with(root(SIGN_IN, SIGN_UP))
-    loc = page.get_by_text("SIGN", exact=False)
+    loc = page.get_by_text("SIGN")
     assert loc.first.text() == "Sign in"
     assert loc.nth(1).text() == "Sign up"
     assert loc.last.text() == "Sign up"
-    assert repr(loc.nth(1)) == "get_by_text('SIGN', exact=False).nth(1)"
+    assert repr(loc.nth(1)) == "get_by_text('SIGN').nth(1)"
 
 
 def test_is_visible_false_for_hidden_or_offscreen():

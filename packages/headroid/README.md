@@ -110,8 +110,8 @@ def page(headroid_page):
   artifacts" report section and as test properties (`user_properties`, which `--junitxml` writes as `<property>`
   elements). A problem saving them is reported as `headroid_artifacts_error` and never fails the run.
 - **Page** (`Device.new_page(app, width=720, height=1600, dpi=320, mute=True)`, also usable without pytest and as a
-  context manager): `locator(text=, rid=, desc=, exact=True)`, `get_by_text(text, exact=True)` (`exact=False`
-  matches a case-insensitive substring), `get_by_id(rid)` (full `pkg:id/name` or short `name`; a React Native
+  context manager): `locator(text=, rid=, desc=, exact=True)`, `get_by_text(text, exact=False)` (like Playwright, a
+  case-insensitive substring by default, since Android often shows button labels in capitals; `exact=True` matches the whole text), `get_by_id(rid)` (full `pkg:id/name` or short `name`; a React Native
   `testID` is a resource id), `get_by_desc(desc)`, `screenshot(path=None)`, `tree()`, `press(key)` (`"BACK"`,
   `"ENTER"`, `"TAB"`, `"DEL"`, `"ESCAPE"`, DPAD keys, letters, digits; keys that act on the whole phone such as HOME,
   POWER, volume and Recents raise `PermissionError`), `wait_for_idle(timeout)` (tree unchanged on two reads 0.5 s

@@ -57,18 +57,19 @@ class Page:
         """Elements matching every criterion given."""
         return Locator(self, text=text, rid=rid, desc=desc, exact=exact)
 
-    def get_by_text(self, text: str, exact: bool = True) -> Locator:
-        """exact=False matches a case-insensitive substring, ignoring extra whitespace."""
-        suffix = "" if exact else ", exact=False"
+    def get_by_text(self, text: str, exact: bool = False) -> Locator:
+        """Like Playwright: a case-insensitive substring by default (Android often shows button labels in capitals);
+        exact=True matches the whole text, case-sensitively."""
+        suffix = ", exact=True" if exact else ""
         return Locator(self, text=text, exact=exact, name=f"get_by_text({text!r}{suffix})")
 
     def get_by_id(self, rid: str) -> Locator:
         """Full ("pkg:id/login_email") or short ("login_email") resource id; a React Native testID is one."""
         return Locator(self, rid=rid, name=f"get_by_id({rid!r})")
 
-    def get_by_desc(self, desc: str, exact: bool = True) -> Locator:
-        """Content description (accessibilityLabel in React Native)."""
-        suffix = "" if exact else ", exact=False"
+    def get_by_desc(self, desc: str, exact: bool = False) -> Locator:
+        """Content description (accessibilityLabel in React Native); matched like get_by_text."""
+        suffix = ", exact=True" if exact else ""
         return Locator(self, desc=desc, exact=exact, name=f"get_by_desc({desc!r}{suffix})")
 
     # --- page actions ---
