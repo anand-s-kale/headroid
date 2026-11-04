@@ -660,25 +660,22 @@ def test_execute_shell_runs_other_commands(command):
 
 def test_open_url_opens_through_headroid():
     # app.openUrl mutes the app and stops it at teardown, which a raw `am start` did not
+    # the URL is one RPC value, never part of a shell line
     driver, device, _ = _driver()
+    assert driver.last_opened_package is None
     assert run(driver.open_url("https://example.com/a?b=1")) is True
     assert ("open_url", "https://example.com/a?b=1") in device.calls
+    assert driver.last_opened_package == "com.android.chrome"
     assert device.server.adb.calls == []
-
-
-def test_open_url_keeps_the_url_as_one_value():
-    driver, device, _ = _driver()
-    url = "x'; screencap -p /sdcard/a.png; echo '"
-    run(driver.open_url(url))
-    assert ("open_url", url) in device.calls
-    assert device.server.adb.calls == []  # never a shell line
 
 
 def test_open_url_raises_headroids_reason():
     driver, device, _ = _driver()
+    run(driver.open_url("https://example.com/"))
     device.displays[0].open_url_result = RpcError(-32602, "url: no single app handles x:y")
     with pytest.raises(RpcError, match="no single app handles"):
         run(driver.open_url("x:y"))
+    assert driver.last_opened_package is None  # not the previous link's app
     assert device.server.adb.calls == []
 
 

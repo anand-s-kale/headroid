@@ -6,6 +6,7 @@ import dev.headroid.server.apps.AppLauncher;
 import dev.headroid.server.apps.AppMuter;
 import dev.headroid.server.apps.AppPresence;
 import dev.headroid.server.apps.HyperOsFreezer;
+import dev.headroid.server.apps.LaunchGuard;
 import dev.headroid.server.apps.UrlHandler;
 import dev.headroid.server.display.DisplayFlags;
 import dev.headroid.server.display.DisplayRegistry;
@@ -22,7 +23,8 @@ import dev.headroid.server.ui.UiAutomationHost;
 import com.genymobile.scrcpy.BuildConfig;
 import com.genymobile.scrcpy.util.Ln;
 
-import android.content.ComponentName;
+import android.content.Intent;
+import android.content.pm.ActivityInfo;
 import android.os.Build;
 import android.system.Os;
 
@@ -102,20 +104,35 @@ public final class Session {
                     throw new RpcException(RpcException.INVALID_PARAMS, "forceStop: not stopping " + pkg + ": " + why);
                 }
             }
+            Intent intent = AppLauncher.launchIntent(pkg, p.optString("activity", null));
+            // a singleTask/singleInstance activity would join the owner's task on display 0 despite MULTIPLE_TASK
+            int launchMode = AppLauncher.launchMode(intent);
+            if (LaunchGuard.reusesTask(launchMode)) { // only then is where the app is open worth a dumpsys
+                String refused = LaunchGuard.whyNotLaunch(pkg, launchMode, whereOpen(pkg), ownDisplays());
+                if (refused != null) {
+                    throw new RpcException(RpcException.INVALID_PARAMS, refused);
+                }
+            }
             if (p.optBool("mute", true)) {
                 // before the launch, so even the first sound is silenced
                 muter.mute(pkg, p.optBool("muteNotifications", false));
             }
-            AppLauncher.launch(displayId, pkg, p.optString("activity", null), forceStop);
+            AppLauncher.launch(displayId, intent, pkg, forceStop);
             launchedPackages.add(pkg);
             return null;
         });
         d.register("app.openUrl", p -> {
             int displayId = displays.require(p.getInt("displayId")).id();
-            String url = p.getString("url");
+            String url = p.getString("url").trim();
             // the handling app must be known before the launch, for the same muting and teardown as app.launch
-            ComponentName handler = UrlHandler.resolve(url);
-            String pkg = handler.getPackageName();
+            ActivityInfo handler = UrlHandler.resolve(url);
+            String pkg = handler.packageName;
+            // the handler may pass the link on into the app's existing task (a trampoline, or a singleTask activity):
+            // never while the app has activities on a display this session does not own, such as the owner's display 0
+            String refused = LaunchGuard.whyNotOpenUrl(pkg, whereOpen(pkg), ownDisplays());
+            if (refused != null) {
+                throw new RpcException(RpcException.INVALID_PARAMS, refused);
+            }
             runningBeforeLaunch.putIfAbsent(pkg, AppPresence.isRunning(pkg));
             if (p.optBool("mute", true)) {
                 muter.mute(pkg, false);
@@ -279,10 +296,21 @@ public final class Session {
         } catch (java.io.IOException e) {
             return "could not check where it runs: " + e.getMessage();
         }
-        List<Integer> own;
-        synchronized (ownedDisplayIds) {
-            own = new ArrayList<>(ownedDisplayIds);
+        return AppPresence.whyNotStop(runningBeforeLaunch.getOrDefault(pkg, AppPresence.isRunning(pkg)), present, ownDisplays());
+    }
+
+    /** The displays with activities of {@code pkg}; when that cannot be checked, the call fails rather than guess. */
+    private static Set<Integer> whereOpen(String pkg) {
+        try {
+            return AppPresence.displaysWithActivities(pkg);
+        } catch (java.io.IOException e) {
+            throw new RpcException(RpcException.INTERNAL, "could not check where " + pkg + " runs: " + e.getMessage());
         }
-        return AppPresence.whyNotStop(runningBeforeLaunch.getOrDefault(pkg, AppPresence.isRunning(pkg)), present, own);
+    }
+
+    private List<Integer> ownDisplays() {
+        synchronized (ownedDisplayIds) {
+            return new ArrayList<>(ownedDisplayIds);
+        }
     }
 }

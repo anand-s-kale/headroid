@@ -339,6 +339,8 @@ class HeadroidDriver(BaseDeviceDriver):
         self._device: Device | None = None
         self._display = None
         self._size: tuple[int, int] | None = None
+        # the package that opened the last link (open_url), so the agent can be told which app it is in
+        self.last_opened_package: str | None = None
 
     # --- connection ---
 
@@ -536,10 +538,14 @@ class HeadroidDriver(BaseDeviceDriver):
 
     async def open_url(self, url: str) -> bool:
         """Opens the link on the hidden display with the one app that handles it (headroid's app.openUrl:
-        own task, excluded from Recents, muted, stopped at the end of the session; never display 0).
+        own task, excluded from Recents, sound and vibration muted, stopped at the end of the session; never
+        display 0). That app's package is kept in last_opened_package.
 
-        Raises headroid's RpcError when no app handles the link or Android would ask which one to use."""
+        Raises headroid's RpcError when the scheme is refused, no app handles the link, Android would ask which
+        app to use, or the app is open on a display this session does not own (such as the phone's own screen)."""
+        self.last_opened_package = None
         package = await self._call("open_url", url)
+        self.last_opened_package = package
         logger.info(f"open_url: {url} opened with {package} on the hidden display")
         return True
 
