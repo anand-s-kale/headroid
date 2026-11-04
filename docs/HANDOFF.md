@@ -91,8 +91,9 @@ needs an explicit `packages:` list on current runners (its default `tools` packa
 - Open: in the third 60-min run the sample app on the hidden display ended between minute 12 and 13 with no kill
   line in the log (headroid's guard was not involved: the next process was started by another session). Possibly
   HyperOS power management; the fourth run logs the app pid and uid state every minute.
-- Not done: focus check / leak watch part of Task 1.8, governor (1.9), video (1.10). Screen-off operation fails
-  (checklist 7b, 2026-11-04): the hidden display sleeps with the phone.
+- Not done: focus check / leak watch part of Task 1.8, governor (1.9), video (1.10). Screen-off operation
+  passed 30 min locked (checklist 7b rerun, 2026-11-04) but failed intermittently in 3 earlier locked runs; root
+  cause not found yet.
 
 ## On-device checklist for the next session with the owner
 
@@ -149,14 +150,19 @@ never capture display 0, and keep screenshots of the hidden display only.
      timer text stopped updating (end screenshot shows 1089, the value from when the screen last turned off) and
      `find` returned nothing (`tree_ms` ~5.2 s, i.e. no window). At 09:20 the screen woke for one sample and the
      timer read 1081 / 1082 expected, so the process kept running; only drawing and the window tree stop. Likely
-     cause: the virtual display shares the default display group's power state, so its activities stop on sleep.
-     Probe 2026-11-04 (paused by the owner, resume here): the display already has `OWN_DISPLAY_GROUP` and
-     `ALWAYS_UNLOCKED` and lands in its own group (`displayGroupId 1`, power group 1). 12 s after `KEYCODE_SLEEP`:
-     group 0 wakefulness 3 (dozing), group 1 wakefulness 1 (awake), virtual display `state ON`, TimerActivity
-     RESUMED, `find` returned live timer text. So the hidden group sleeps later, most likely on its own
-     user-activity timeout (nothing ever pokes group 1). Next: rerun `sleep_watch` (state every 10 s for ~3 min
-     locked) to time it; candidate fix is a server ticker calling `IPowerManager.userActivity(hiddenDisplayId, ...)`
-     (already wrapped in `wrappers/PowerManager`) every few seconds per hidden display, which stays inside group 1.
+     cause guessed then (power) was **wrong**, see the rerun below.
+   - **7b rerun — PASSED, 30/30 minutes locked** (10:13–10:43, no code change). New frame every minute, full tree
+     (12 nodes), timer within 1 s of wall time at every sample. Investigation before it (all locked): the display
+     has `OWN_DISPLAY_GROUP` + `ALWAYS_UNLOCKED`, sits in power group 1, and group 1 stays awake (wakefulness 1,
+     display `state ON`) for 3+ min while group 0 dozes; TimerActivity stays RESUMED, process state TOP, not
+     frozen. `dumpsys` calls between reads do not break it. Of 8 locked runs today, 3 failed early (find empty,
+     ~5 s per read, which matches the 5 s accessibility interaction timeout when the app's UI thread does not
+     answer) and the last 5 passed, including 6 and 30 min. One failing run also failed **before** the lock (the
+     `nav_timer` tap did not open the timer). Not reproduced since, root cause unknown. Suspect: the failing runs
+     reused a sample-app process left over from a session that was killed (Wi-Fi drop, orphaned host). Next time it
+     fails, the trap script (scratchpad `why6.py`: one read per minute, on first failure saves screenshot, tree,
+     window/activity/power/display/SurfaceFlinger/accessibility dumps, logcat, app ticks and a `debuggerd -j`
+     stack) will show where the app's UI thread is stuck. A power keep-awake ticker is **not** needed.
      Test-harness note: on Windows, stopping a background bash task can leave its `python.exe` child running, which
      keeps the session alive on the phone; kill leftover host scripts by command line.
 
