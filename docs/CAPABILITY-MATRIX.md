@@ -20,7 +20,7 @@ Legend: ✅ works · ⚠️ works with caveats · ❌ does not work · ❔ untes
 | `FLAG_SECURE` content | ❌ | ❌ | ❌ | secure displays need root |
 | Isolated audio / notifications | ❌ | ❌ | ❌ | shared system services |
 | Runs with screen off / locked | ❔ | ❔ | ❔ | to test |
-| AI agent via ARTEMIS manual mode (`headroid mcp`) | ❔ | ❔ | ❔ | e2e login flow passed on POCO F6 (Android 16) 2026-11-04; Xiaomi needs Battery saver "No restrictions" |
+| AI agent via ARTEMIS manual mode (`headroid mcp`) | ❔ | ❔ | ✅ | e2e login flow passed on POCO F6 (Android 16) 2026-11-04; Xiaomi needs Battery saver "No restrictions" |
 
 ## Verified devices
 
